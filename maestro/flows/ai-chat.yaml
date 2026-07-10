@@ -1,0 +1,9 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "AI Concierge"
+- assertVisible: "How can I help you plan your trip?"
+- inputText: "Best time to visit Luxor"
+- tapOn: "Send"
+- waitForAnimationToEnd
+- assertVisible: "October to April"

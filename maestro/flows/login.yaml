@@ -1,0 +1,9 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "Get Started"
+- assertVisible: "Welcome Back"
+- inputText: "test@rahal.app"
+- inputText: "TestPass123!"
+- tapOn: "Sign In"
+- assertVisible: "Home"

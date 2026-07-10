@@ -1,0 +1,13 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "Get Started"
+- tapOn: "Create an account"
+- assertVisible: "Create Account"
+- inputText: "John Doe"
+- inputText: "john@rahal.app"
+- inputText: "StrongPass123!"
+- inputText: "StrongPass123!"
+- tapOn: "I agree to the Terms of Service and Privacy Policy."
+- tapOn: "Create Account"
+- assertVisible: "Home"

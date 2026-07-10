@@ -1,0 +1,14 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "AI Concierge"
+- tapOn: "Plan Your Dream Journey"
+- assertVisible: "Describe your dream journey"
+- inputText: "Luxor"
+- tapOn: "4 days"
+- tapOn: "Mid-Range"
+- tapOn: "2 travelers"
+- tapOn: "History"
+- tapOn: "Generate Itinerary"
+- waitForAnimationToEnd
+- assertVisible: "4 Days in Luxor"

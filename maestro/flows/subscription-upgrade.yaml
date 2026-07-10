@@ -1,0 +1,11 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "Profile"
+- tapOn: "Subscription"
+- assertVisible: "Current Plan"
+- tapOn: "Upgrade Plan"
+- assertVisible: "Traveler Pro"
+- tapOn: "Start Traveler Pro"
+- waitForAnimationToEnd
+- assertVisible: "Payment Successful"

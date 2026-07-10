@@ -1,0 +1,20 @@
+appId: com.rahal.mobile
+---
+- launchApp
+- tapOn: "Explore"
+- tapOn: "Hotels"
+- tapOn: "AI Smart Search"
+- assertVisible: "Describe your perfect stay"
+- inputText: "5 star hotel in Luxor with Nile view and pool under 15000 EGP"
+- tapOn: "Search"
+- waitForAnimationToEnd
+- assertVisible: "Found"
+- tapOn: "Book Now"
+- assertVisible: "Select dates"
+- tapOn: "Check-in"
+- tapOn: "Check-out"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Next"
+- tapOn: "Book Now"
+- assertVisible: "Payment Successful"
