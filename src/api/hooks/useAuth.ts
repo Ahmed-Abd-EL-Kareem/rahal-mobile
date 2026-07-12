@@ -8,7 +8,6 @@ import { router } from 'expo-router';
 export function useLogin() {
   const { login } = useAuthStore();
   const { showToast } = useUIStore();
-  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (credentials: { email: string; password: string }) => 

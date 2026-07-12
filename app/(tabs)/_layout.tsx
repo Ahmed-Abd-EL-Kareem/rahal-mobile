@@ -1,16 +1,14 @@
-// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors, isDark } = useTheme();
   
-  const activeTintColor = isDark ? '#F8BC51' : '#7E5700';
-  const inactiveTintColor = isDark ? '#9C8F7C' : '#827564';
+  const activeTintColor = colors.primary;
+  const inactiveTintColor = colors.outline;
 
   return (
     <Tabs
@@ -18,9 +16,9 @@ export default function TabsLayout() {
         tabBarActiveTintColor: activeTintColor,
         tabBarInactiveTintColor: inactiveTintColor,
         tabBarStyle: {
-          backgroundColor: isDark ? '#1E1C17' : '#FFFFFF',
+          backgroundColor: colors.surface,
           borderTopWidth: 1,
-          borderTopColor: isDark ? '#2C2A23' : '#D4C4B0',
+          borderTopColor: colors.outlineVariant,
           height: 70,
           paddingBottom: 10,
         },
@@ -46,6 +44,15 @@ export default function TabsLayout() {
           title: t('common.nav.destinations'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="hotel"
+        options={{
+          title: t('common.nav.hotels'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="business-outline" size={size} color={color} />
           ),
         }}
       />

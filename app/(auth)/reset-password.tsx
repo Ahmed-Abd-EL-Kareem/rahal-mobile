@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { useTheme } from '@/hooks/useTheme';
 
 const resetPasswordSchema = z.object({
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
@@ -25,6 +26,7 @@ export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { showToast } = useUIStore();
+  const { colors, isDark } = useTheme();
   const params = useLocalSearchParams<{ email?: string }>();
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -73,7 +75,7 @@ export default function ResetPasswordScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       keyboardVerticalOffset={100}
     >
       <ScrollView
@@ -91,12 +93,12 @@ export default function ResetPasswordScreen() {
           <Text style={{ 
             fontFamily: 'PlayfairDisplay_700Bold', 
             fontSize: 24, 
-            color: '#1C1C19',
+            color: colors.onSurface,
             marginBottom: 8,
           }}>
             {t('auth.resetPasswordTitle')}
           </Text>
-          <Text style={{ fontSize: 16, color: '#504536', textAlign: 'center', paddingHorizontal: 20 }}>
+          <Text style={{ fontSize: 16, color: colors.onSurfaceVariant, textAlign: 'center', paddingHorizontal: 20 }}>
             {t('auth.resetPasswordSubtitle')}
           </Text>
         </View>
@@ -115,14 +117,9 @@ export default function ResetPasswordScreen() {
                 placeholder={t('auth.newPasswordLabel')}
                 error={error?.message}
                 secureTextEntry={!isPasswordVisible}
-                rightIcon={
-                  <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                    <Text style={{ color: '#8F1301', fontSize: 14 }}>
-                      {isPasswordVisible ? 'Hide' : 'Show'}
-                    </Text>
-                  </TouchableOpacity>
-                }
-                autoComplete="new-password"
+                rightIcon="eye-outline"
+                onRightIconPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                autoCompleteType="new-password"
               />
             )}
           />
@@ -138,12 +135,12 @@ export default function ResetPasswordScreen() {
                       height: 4,
                       borderRadius: 2,
                       marginRight: 4,
-                      backgroundColor: i < getPasswordStrength(newPassword) ? '#C8922A' : '#D4C4B0',
+                      backgroundColor: i < getPasswordStrength(newPassword) ? '#C8922A' : (isDark ? '#3A3833' : '#D4C4B0'),
                     }}
                   />
                 ))}
               </View>
-              <Text style={{ fontSize: 12, color: '#504536' }}>
+              <Text style={{ fontSize: 12, color: colors.onSurfaceVariant }}>
                 {t(`auth.strength${strengthLabels[getPasswordStrength(newPassword)]}`)}
               </Text>
             </View>
@@ -162,14 +159,9 @@ export default function ResetPasswordScreen() {
                 placeholder={t('auth.confirmPasswordLabel')}
                 error={error?.message}
                 secureTextEntry={!isConfirmPasswordVisible}
-                rightIcon={
-                  <TouchableOpacity onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}>
-                    <Text style={{ color: '#8F1301', fontSize: 14 }}>
-                      {isConfirmPasswordVisible ? 'Hide' : 'Show'}
-                    </Text>
-                  </TouchableOpacity>
-                }
-                autoComplete="new-password"
+                rightIcon="eye-outline"
+                onRightIconPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                autoCompleteType="new-password"
               />
             )}
           />

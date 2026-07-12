@@ -4,6 +4,7 @@ import { api } from '@/api/client';
 import { useAISessionStore, ChatMessage, ChatSession } from '@/store/aiSessionStore';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { SuccessResponse, AIChatResponse } from '@/types/api';
 
 interface UseAIChatReturn {
   messages: ChatMessage[];
@@ -47,14 +48,14 @@ export function useAIChat(): UseAIChatReturn {
 
       const response = await api.post('ai/chat', {
         json: { messages: [...messages, { role: 'user', content }] },
-      }).json<{ reply: string; tokensUsed: number }>();
+      }).json<SuccessResponse<AIChatResponse>>();
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}_ai`,
         role: 'assistant',
-        content: response.reply,
+        content: response.data.reply,
         timestamp: new Date(),
-        tokensUsed: response.tokensUsed,
+        tokensUsed: response.data.tokensUsed,
       };
       addMessage(chatId, aiMessage);
     } catch (error: any) {

@@ -1,433 +1,381 @@
 // app/(tabs)/profile.tsx
-import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, Alert, Image } from 'react-native';
+import React from 'react';
+import { ScrollView, View, Text, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import { Card, CardContent, Button, Badge } from '@/components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useTheme } from '@/hooks/useTheme';
 import * as ImagePicker from 'expo-image-picker';
+import { useColorScheme } from 'nativewind';
 
 export default function ProfileScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+
   const { user, subscription, logout, updateProfile, isLoading: profileLoading } = useAuthStore();
-  const { setLanguage } = useUIStore();
+  const { toggleSideMenu, setLanguage } = useUIStore();
 
-  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-  });
-
-  const handleImagePick = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant access to your photo library');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      // Upload image to server
-      // For now, just update local state
-      // In real app: upload to backend and update user
-    }
-  };
-
-  const handleSave = async () => {
+  const handleImagePick = async (useCamera: boolean) => {
     try {
-      await updateProfile(formData);
-      setIsEditing(false);
-      alert('Profile updated successfully!');
+      const permissionResult = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permissionResult.status !== 'granted') {
+        Alert.alert(
+          'Permission Needed',
+          `Please grant access to your ${useCamera ? 'camera' : 'photo library'} in settings.`
+        );
+        return;
+      }
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+            base64: true,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+            base64: true,
+          });
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        const base64Image = `data:image/jpeg;base64,${asset.base64}`;
+        await updateProfile({ image: base64Image });
+        Alert.alert('Success', 'Profile photo updated successfully!');
+      }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update profile');
+      Alert.alert('Error', error.message || 'Failed to update photo');
     }
   };
 
-  const handleCancel = () => {
-    setFormData({ name: user?.name || '', email: user?.email || '' });
-    setIsEditing(false);
-  };
-
-  const handleLogout = () => {
+  const showImagePickerOptions = () => {
     Alert.alert(
-      t('common.nav.logout'),
-      'Are you sure you want to log out?',
+      'Profile Photo',
+      'Choose how you want to select your photo',
       [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.nav.logout'), style: 'destructive', onPress: () => logout() },
+        { text: 'Take Photo', onPress: () => handleImagePick(true) },
+        { text: 'Choose from Gallery', onPress: () => handleImagePick(false) },
+        { text: 'Cancel', style: 'cancel' },
       ]
     );
   };
 
-  const planNames = {
-    free: t('home.pricing.wanderer.title'),
-    pro: t('home.pricing.pro.title'),
-    enterprise: 'Enterprise',
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log Out', style: 'destructive', onPress: () => logout() },
+      ]
+    );
   };
 
-  const planBadges = {
-    free: 'default',
-    pro: 'gold',
-    enterprise: 'blue',
-  } as const;
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(newLang);
+    setLanguage(newLang);
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = isDarkMode ? 'light' : 'dark';
+    setColorScheme(nextTheme);
+  };
+
+  if (!user) {
+    return (
+      <View style={{ paddingTop: insets.top }} className="flex-1 bg-background dark:bg-obsidian justify-center items-center p-6">
+        <Image source={require('../../assets/logo-2.png')} style={{ width: 80, height: 80, marginBottom: 16 }} resizeMode="contain" />
+        <Text className="text-3xl font-headline text-pharaoh-gold mb-2">Rahal</Text>
+        <Text className="text-body-md text-on-surface-variant dark:text-outline text-center mb-8 px-6">
+          Log in or sign up to access your profile settings, booking details, and personalized trip planners.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(auth)/login')}
+          className="w-full h-12 bg-pharaoh-gold rounded-full justify-center items-center shadow-md active:scale-95"
+        >
+          <Text className="text-white font-semibold uppercase tracking-wider text-label-md">
+            Log In / Sign Up
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-4 py-6">
-          {/* Profile Header */}
-          <View className="flex-row items-center gap-4 mb-8">
-            <TouchableOpacity onPress={handleImagePick} className="relative">
-              <View className="w-28 h-28 rounded-full bg-primary-container flex-items-center justify-center overflow-hidden border-2 border-primary/30">
-                {user?.image ? (
-                  <Image source={{ uri: user.image }} style={{ width: 112, height: 112, borderRadius: 56 }} />
-                ) : (
-                  <Text style={{ fontSize: 48, fontFamily: 'PlayfairDisplay_700Bold', color: '#7E5700' }}>
-                    {user?.name?.charAt(0).toUpperCase() || 'R'}
-                  </Text>
-                )}
-              </View>
-              <View className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex-items-center justify-center border-2 border-background">
-                <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
-              </View>
-            </TouchableOpacity>
+    <View style={{ paddingTop: insets.top }} className="flex-1 bg-background dark:bg-obsidian">
+      {/* Top App Bar */}
+      <View className="h-16 flex-row justify-between items-center px-4 border-b border-outline-variant/10 bg-surface dark:bg-obsidian">
+        <View className="flex-row items-center gap-2">
+          <TouchableOpacity onPress={toggleSideMenu} className="p-2 active:scale-95">
+            <Ionicons name="menu-outline" size={24} color="#C8922A" />
+          </TouchableOpacity>
+          <Text className="text-headline-md-mobile font-headline text-pharaoh-gold">Rahal</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/ai')} className="p-2 active:scale-95">
+          <Ionicons name="sparkles-outline" size={22} color="#C8922A" />
+        </TouchableOpacity>
+      </View>
 
-            <View className="flex-1">
-              <Text className="text-headline-md font-headline text-on-surface">
-                {isEditing ? (
-                  <input
-                    value={formData.name}
-                    onChangeText={(v) => setFormData(prev => ({ ...prev, name: v }))}
-                    className="w-auto"
-                    autoFocus
-                  />
-                ) : (
-                  user?.name || t('common.appName')
-                )}
-              </Text>
-              <Text className="text-body-md text-on-surface-variant mt-1">{user?.email}</Text>
-              <View className="flex-row items-center gap-2 mt-2">
-                <View className="w-8 h-8 rounded-full bg-primary/10 flex-items-center justify-center">
-                  <MaterialIcons name={isDark ? 'dark_mode' : 'light_mode'} size={18} color="#C8922A" />
-                </View>
-                <Text className="text-label-md text-on-surface-variant">
-                  {isDark ? 'Dark Mode' : 'Light Mode'}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Edit/Save Actions */}
-          {!isEditing ? (
-            <TouchableOpacity
-              onPress={() => setIsEditing(true)}
-              className="w-full flex-row items-center justify-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/30"
-            >
-              <Ionicons name="create-outline" size={24} color="#C8922A" />
-              <Text className="text-body-md text-primary font-medium">Edit Profile</Text>
-            </TouchableOpacity>
-          ) : (
-            <View className="flex-row gap-3">
-              <Button variant="primary" onPress={handleSave} fullWidth flex={1}>
-                {t('account.saveChanges')}
-              </Button>
-              <Button variant="outline" onPress={handleCancel} fullWidth flex={1}>
-                {t('account.cancel')}
-              </Button>
-            </View>
-          )}
-
-          {/* Profile Form */}
-          {isEditing && (
-            <Card className="mt-6">
-              <CardContent>
-                <Text className="text-headline-md font-headline text-on-surface mb-4">
-                  {t('account.fullName')}
-                </Text>
-                <Input
-                  label={t('account.fullName')}
-                  value={formData.name}
-                  onChangeText={(v) => setFormData(prev => ({ ...prev, name: v }))}
-                  placeholder={t('auth.namePlaceholder')}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Account Info */}
-          <View className="px-4 mt-8">
-            <Text className="text-label-md text-on-surface-variant uppercase tracking-wider mb-4">
-              Account Information
-            </Text>
-
-            <Card className="mb-4">
-              <CardContent>
-                <View className="flex-row items-center gap-4">
-                  <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                    <Ionicons name="person-outline" size={24} color="#C8922A" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-label-md text-on-surface-variant">Full Name</Text>
-                    <Text className="text-body-md text-on-surface mt-1">{user?.name || 'Not set'}</Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-
-            <Card className="mb-4">
-              <CardContent>
-                <View className="flex-row items-center gap-4">
-                  <View className="w-10 h-10 rounded-lg bg-secondary/10 flex-items-center justify-center">
-                    <Ionicons name="mail-outline" size={24} color="#366286" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-label-md text-on-surface-variant">Email Address</Text>
-                    <Text className="text-body-md text-on-surface mt-1">{user?.email}</Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-
-            <Card className="mb-4">
-              <CardContent>
-                <View className="flex-row items-center gap-4">
-                  <View className="w-10 h-10 rounded-lg bg-success/10 flex-items-center justify-center">
-                    <Ionicons name="calendar-outline" size={24} color="#2E7D32" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-label-md text-on-surface-variant">Member Since</Text>
-                    <Text className="text-body-md text-on-surface mt-1">
-                      {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'}
-                    </Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-
-            <Card className="mb-4">
-              <CardContent>
-                <View className="flex-row items-center gap-4">
-                  <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                    <Ionicons name="cash-outline" size={24} color="#C8922A" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-label-md text-on-surface-variant">Preferred Currency</Text>
-                    <Text className="text-body-md text-on-surface mt-1">EGP (Egyptian Pound)</Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-          </View>
-
-          {/* Subscription Card */}
-          {subscription && (
-            <View className="px-4 mb-4">
-              <Card className="bg-primary/5 border-primary/30">
-                <CardContent>
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center gap-3">
-                      <View className="w-12 h-12 rounded-xl bg-primary/10 flex-items-center justify-center">
-                        <MaterialIcons name={subscription?.planName === 'pro' ? 'workspace-premium' : 'star'} size={24} color="#C8922A" />
-                      </View>
-                      <View>
-                        <Text className="text-headline-md font-headline text-on-surface">
-                          {planNames[subscription.planName as keyof typeof planNames]}
-                        </Text>
-                        <Text className="text-body-md text-on-surface-variant">
-                          {subscription.status === 'active' ? t('account.activePlanBadge') : t('account.canceledPlanBadge')}
-                        </Text>
-                      </View>
-                    </View>
-                    {subscription.planName === 'free' && (
-                      <Button variant="secondary" size="sm" onPress={() => router.push('/subscription/plans')}>
-                        {t('account.upgradeBtn')}
-                      </Button>
-                    )}
-                  </View>
-                  
-                  <View className="mt-6 grid grid-cols-3 gap-4">
-                    <View className="col-span-1">
-                      <Text className="text-label-sm text-on-surface/70">{t('account.tripsLimit')}</Text>
-                      <Text className="text-headline-md font-headline text-on-primary mt-1">
-                        {subscription.usage?.tripsThisMonth || 0} / {subscription.plan?.limits?.tripsPerMonth || '∞'}
+      <ScrollView className="flex-1 px-4 mt-4" showsVerticalScrollIndicator={false}>
+        {/* Profile Header Section */}
+        <View className="flex-col items-center mt-6 mb-8">
+          <View className="relative">
+            {/* Papyrus double gold border style */}
+            <View style={{ borderColor: '#C8922A', borderWidth: 1, padding: 2, borderRadius: 9999 }}>
+              <View style={{ borderColor: '#C8922A', borderWidth: 1, padding: 2, borderRadius: 9999 }}>
+                <View className="w-28 h-28 rounded-full overflow-hidden bg-primary-container/20">
+                  {user?.image ? (
+                    <Image source={{ uri: user.image }} className="w-full h-full object-cover" />
+                  ) : (
+                    <View className="w-full h-full bg-primary-fixed flex items-center justify-center">
+                      <Text className="text-4xl font-headline text-on-primary-fixed">
+                        {user?.name?.charAt(0).toUpperCase() || 'R'}
                       </Text>
                     </View>
-                    <View className="col-span-1">
-                      <Text className="text-label-sm text-on-primary/70">{t('account.tokensLimit')}</Text>
-                      <Text className="text-headline-md font-headline text-on-primary mt-1">
-                        {(subscription.usage?.tokensUsedThisMonth || 0).toLocaleString()} / {(subscription.plan?.limits?.tokensPerMonth || 15000).toLocaleString()}
-                      </Text>
-                    </View>
-                    <View className="col-span-1">
-                      <Text className="text-label-sm text-on-primary/70">{t('account.requestsLimit')}</Text>
-                      <Text className="text-headline-md font-headline text-on-primary mt-1">
-                        {subscription.usage?.requestsToday || 0} / {subscription.plan?.limits?.requestsPerDay || 10}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {subscription.planName !== 'free' && (
-                    <Button variant="outline" className="mt-6" fullWidth onPress={() => router.push('/settings/account')}>
-                      {t('account.cancelBtn')}
-                    </Button>
                   )}
-                </CardContent>
-              </Card>
+                </View>
+              </View>
             </View>
-          )}
+            {profileLoading ? (
+              <View className="absolute inset-0 w-32 h-32 justify-center items-center bg-black/30 rounded-full">
+                <ActivityIndicator size="small" color="#C8922A" />
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={showImagePickerOptions}
+                className="absolute bottom-1 right-1 bg-pharaoh-gold p-2.5 rounded-full shadow-lg active:scale-90"
+              >
+                <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+          </View>
 
-          {/* Menu Sections */}
-          <View className="px-4 space-y-4">
-            {/* Account Settings */}
-            <Card className="p-0 overflow-hidden">
-              <Text className="text-label-md text-on-surface-variant uppercase tracking-wider px-4 py-3 border-b border-outline-variant">
-                {t('account.sidebarProfile')}
+          <View className="items-center mt-4">
+            <Text className="text-headline-md-mobile font-headline text-on-surface dark:text-inverse-on-surface">
+              {user?.name || 'Guest'}
+            </Text>
+            <Text className="text-body-md text-on-surface-variant dark:text-outline mt-0.5">
+              {user?.email}
+            </Text>
+            <View className="flex-row items-center mt-3 px-4 py-1.5 rounded-full bg-primary-container/10 border border-primary-container/20">
+              <Ionicons name="star" size={14} color="#C8922A" style={{ marginRight: 6 }} />
+              <Text className="text-label-md font-semibold text-pharaoh-gold">
+                {subscription?.planName === 'pro' ? 'Premium Tier' : 'Wanderer Tier'}
               </Text>
-              <TouchableOpacity onPress={() => router.push('/settings/profile')} className="flex-row items-center gap-4 py-4">
-                <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                  <Ionicons name="person-outline" size={24} color="#C8922A" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">{t('account.sidebarProfile')}</Text>
-                  <Text className="text-label-sm text-on-surface-variant">{t('account.profileSubtitle')}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#827564" />
-              </TouchableOpacity>
-              <View className="h-px bg-outline-variant mx-4" />
-              <TouchableOpacity onPress={() => router.push('/subscription/plans')} className="flex-row items-center gap-4 py-4">
-                <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                  <Ionicons name="card-outline" size={24} color="#C8922A" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">{t('account.sidebarSubscription')}</Text>
-                  <Text className="text-body-md text-on-surface-variant mt-1">{t('account.subscriptionSubtitle')}</Text>
-                </View>
-              </TouchableOpacity>
-              <View className="h-px bg-outline-variant mx-4" />
-              <TouchableOpacity onPress={() => router.push('/settings/account')} className="flex-row items-center gap-4 py-4">
-                <View className="w-10 h-10 rounded-lg bg-secondary/10 flex-items-center justify-center">
-                  <Ionicons name="lock-closed-outline" size={24} color="#366286" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">{t('account.changePasswordBtn')}</Text>
-                  <Text className="text-body-md text-on-surface-variant mt-1">{t('account.changePasswordDesc')}</Text>
-                </View>
-              </TouchableOpacity>
-            </Card>
-
-            {/* Preferences */}
-            <Card className="p-0 overflow-hidden">
-              <Text className="text-label-md text-on-surface-variant uppercase tracking-wider px-4 py-3 border-b border-outline-variant">
-                {t('account.sidebarPreferences')}
-              </Text>
-              <TouchableOpacity onPress={() => setLanguage(t('common.locale') === 'ar' ? 'en' : 'ar')} className="flex-row items-center justify-between py-4 px-4">
-                <View className="flex-row items-center gap-3">
-                  <View className="w-12 h-12 rounded-xl bg-primary/10 flex-items-center justify-center">
-                    <Ionicons name="language-outline" size={24} color="#C8922A" />
-                  </View>
-                  <View>
-                    <Text className="text-body-lg font-medium text-on-surface">{t('account.preferredLanguage')}</Text>
-                    <Text className="text-label-sm text-on-surface-variant">
-                      {t('common.locale') === 'ar' ? 'العربية' : 'English'}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => setLanguage(t('common.locale') === 'ar' ? 'en' : 'ar')} className="p-2">
-                  <Ionicons name="chevron-forward" size={24} color="#827564" />
-                </TouchableOpacity>
-              </TouchableOpacity>
-              <View className="h-px bg-outline-variant mx-4" />
-              <TouchableOpacity className="flex-row items-center justify-between py-4 px-4">
-                <View className="flex-row items-center gap-3">
-                  <View className="w-10 h-10 rounded-lg bg-secondary/10 flex-items-center justify-center">
-                    <Ionicons name="cash-outline" size={24} color="#366286" />
-                  </View>
-                  <View>
-                    <Text className="text-label-md text-on-surface-variant">{t('account.currency')}</Text>
-                    <Text className="text-body-md text-on-surface mt-1">EGP</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </Card>
-
-            {/* Favorites */}
-            <Card className="p-0 overflow-hidden">
-              <Text className="text-label-md text-on-surface-variant uppercase tracking-wider px-4 py-3 border-b border-outline-variant">
-                {t('common.nav.favorites')}
-              </Text>
-              <TouchableOpacity onPress={() => router.push('/favorites')} className="flex-row items-center gap-4 py-4">
-                <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                  <Ionicons name="heart-outline" size={24} color="#C8922A" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">{t('common.nav.favorites')}</Text>
-                  <Text className="text-label-sm text-on-surface-variant">{t('common.nav.favoriteDestinations')}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#827564" />
-              </TouchableOpacity>
-            </Card>
-
-            {/* Support */}
-            <Card className="p-0 overflow-hidden">
-              <Text className="text-label-md text-on-surface-variant uppercase tracking-wider px-4 py-3 border-b border-outline-variant">
-                Support
-              </Text>
-              <TouchableOpacity className="flex-row items-center gap-4 py-4 px-4">
-                <View className="w-10 h-10 rounded-lg bg-primary/10 flex-items-center justify-center">
-                  <Ionicons name="help-circle-outline" size={24} color="#C8922A" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">Help Center</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#827564" />
-              </TouchableOpacity>
-              <View className="h-px bg-outline-variant mx-4" />
-              <TouchableOpacity className="flex-row items-center gap-4 py-4 px-4">
-                <View className="w-10 h-10 rounded-lg bg-secondary/10 flex-items-center justify-center">
-                  <Ionicons name="document-text-outline" size={24} color="#366286" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">Privacy Policy</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#827564" />
-              </TouchableOpacity>
-              <View className="h-px bg-outline-variant mx-4" />
-              <TouchableOpacity className="flex-row items-center gap-4 py-4 px-4">
-                <View className="w-10 h-10 rounded-lg bg-tertiary/10 flex-items-center justify-center">
-                  <Ionicons name="shield-checkmark-outline" size={24} color="#B12D17" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-body-md text-on-surface">Terms of Service</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#827564" />
-              </TouchableOpacity>
-            </Card>
-
-            {/* Logout */}
-            <View className="pt-4">
-              <Button variant="ghost" fullWidth destructive onPress={handleLogout} disabled={profileLoading}>
-                <Ionicons name="log-out-outline" size={24} style={{ marginRight: 8 }} />
-                <Text>{t('common.nav.logout')}</Text>
-              </Button>
             </View>
-
-            <View className="h-20" />
           </View>
         </View>
+
+        {/* Menu List (Bento-inspired List) */}
+        <View className="mb-8">
+          {/* Profile & Preferences */}
+          <TouchableOpacity
+            onPress={() => router.push('/settings/profile')}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="person-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Profile & Preferences
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Bio, interests, and discovery settings
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Subscription */}
+          <TouchableOpacity
+            onPress={() => router.push('/subscription/plans')}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="card-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Subscription
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Manage your Premium plan and billing
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Favorites */}
+          <TouchableOpacity
+            onPress={() => router.push('/favorites')}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="heart-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Favorites
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Your saved temples, oases, and stays
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Bookings */}
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/trips')}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="calendar-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Bookings
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Current and past travel itineraries
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Security */}
+          <TouchableOpacity
+            onPress={() => router.push('/settings/profile')}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="shield-checkmark-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Security
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Password, 2FA, and privacy control
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Language */}
+          <TouchableOpacity
+            onPress={toggleLanguage}
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="language-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row justify-between items-center pr-2">
+                <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                  Language
+                </Text>
+                <View className="bg-primary-fixed px-2 py-0.5 rounded">
+                  <Text className="text-[10px] font-bold text-pharaoh-gold">EN / AR</Text>
+                </View>
+              </View>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                {i18n.language === 'ar' ? 'العربية' : 'English (US)'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="#D4C4B0" />
+          </TouchableOpacity>
+
+          {/* Theme */}
+          <View
+            className="flex-row items-center p-4 bg-surface-container-low dark:bg-sand-dark rounded-xl border border-outline-variant/10 mb-3"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="contrast-outline" size={22} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-on-surface dark:text-inverse-on-surface">
+                Theme
+              </Text>
+              <Text className="text-xs text-on-surface-variant dark:text-outline mt-0.5">
+                Light / Obsidian mode
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              className={`w-10 h-5 rounded-full relative justify-center ${
+                isDarkMode ? 'bg-pharaoh-gold' : 'bg-outline-variant/60'
+              }`}
+            >
+              <View
+                style={{
+                  transform: [{ translateX: isDarkMode ? 24 : 2 }],
+                  width: 12,
+                  height: 12,
+                }}
+                className="bg-white rounded-full"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Log Out */}
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="flex-row items-center p-4 bg-tertiary-container/5 dark:bg-tertiary-container/10 rounded-xl border border-tertiary-container/20 mb-3 active:opacity-85"
+          >
+            <View className="w-12 h-12 flex items-center justify-center rounded-lg bg-surface-container-lowest dark:bg-surface-container-lowest/10 shadow-sm mr-4">
+              <Ionicons name="log-out-outline" size={22} color="#8F1301" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-label-md font-medium text-tertiary">
+                Log Out
+              </Text>
+              <Text className="text-xs text-tertiary/80 mt-0.5">
+                Securely exit your session
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={18} color="rgba(143, 19, 1, 0.4)" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Rahal Insight Tip Card */}
+        <View style={{ borderColor: '#C8922A', borderWidth: 1, padding: 2, borderRadius: 12 }} className="mb-12">
+          <View style={{ borderColor: '#C8922A', borderWidth: 1, borderRadius: 10 }} className="p-5 bg-surface-container-lowest dark:bg-sand-dark flex-row items-start gap-4">
+            <View className="p-2.5 bg-primary-fixed/20 rounded-lg">
+              <Ionicons name="sparkles" size={20} color="#C8922A" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row justify-between items-center mb-1">
+                <Text className="text-label-sm font-bold text-pharaoh-gold uppercase tracking-wider">
+                  Rahal Insight
+                </Text>
+                <Text className="text-[10px] text-on-surface-variant dark:text-outline">
+                  AI Concierge
+                </Text>
+              </View>
+              <Text className="text-body-md text-on-surface dark:text-inverse-on-surface italic leading-5">
+                "The Nile is at its most serene during the golden hour in Aswan. We recommend booking your felucca trip between 4:30 PM and 5:00 PM for the best atmospheric lighting."
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Extra Bottom Padding to clear Tab Bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

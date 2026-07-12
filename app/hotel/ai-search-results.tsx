@@ -1,314 +1,336 @@
 // app/hotel/ai-search-results.tsx
 import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, Image, Alert, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ScrollView, View, Text, TouchableOpacity, Image, TextInput, ActivityIndicator } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import { Card, CardContent, Badge, SparkleBadge, Button, Input, SearchBar } from '@/components/ui';
-import { useTheme } from '@/hooks/useTheme';
-import { useAIHotelSearch } from '@/api/hooks/useHotels';
+import { Ionicons } from '@expo/vector-icons';
+import { Badge, Card, CardContent } from '@/components/ui';
+import { useHotels } from '@/api/hooks/useHotels';
 import { formatCurrency } from '@/utils/currency';
-
-const CITIES = [
-  'Cairo', 'Luxor', 'Aswan', 'Alexandria', 'Sharm El-Sheikh',
-  'Hurghada', 'Marsa Alam', 'Siwa', 'Fayoum', 'Dahab',
-];
-
-const AMENITIES = [
-  'Free WiFi', 'Pool', 'Spa', 'Gym', 'Beach Access',
-  'Restaurant', 'Bar', 'Room Service', 'Parking', 'Airport Shuttle',
-];
-
-const STAR_OPTIONS = [1, 2, 3, 4, 5];
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/store/authStore';
+import { useFavoritesStore } from '@/store/favoritesStore';
 
 export default function AIHotelSearchResultsScreen() {
-  const { t } = useTranslation();
-  const router = useRouter();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ query?: string }>();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { searchHotels: aiSearch, isLoading } = useAIHotelSearch();
-  const [query, setQuery] = useState(params.query || '');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [guests, setGuests] = useState(2);
-  const [rooms, setRooms] = useState(1);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [selectedStars, setSelectedStars] = useState<number | null>(null);
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [showFilters, setShowFilters] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const { isAuthenticated, logout } = useAuthStore();
+  
+  const [searchInput, setSearchInput] = useState(params.query || '');
+  const [searchQuery, setSearchQuery] = useState(params.query || '');
+  const [hasSearched, setHasSearched] = useState(!!params.query);
+  const { favoriteHotels, toggleHotelFavorite } = useFavoritesStore();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (params.query) {
-      setQuery(params.query);
-      handleSearch(params.query);
-    }
-  }, [params.query]);
+  // Query real hotels from the backend database using the search term
+  const { data: hotelsResponse, isLoading } = useHotels({
+    search: searchQuery || undefined,
+    limit: 20,
+  });
 
-  const handleSearch = async (searchQuery: string) => {
-    setIsSearching(true);
-    try {
-      const response = await aiSearch({ query: searchQuery, context: { guests, rooms } });
-      // Parse the AI response to extract hotel data
-      // For now, use mock data
-      const mockResults = [
-        { id: '1', name: { en: 'Four Seasons Cairo', ar: 'فور سيزونز القاهرة' }, city: 'Cairo', stars: 5, averagePricePerNight: 15000, currency: 'EGP', coverImage: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400', rating: 4.9, reviews: 1240, amenities: ['Free WiFi', 'Pool', 'Spa', 'Gym'], aiMatch: 95, aiPerfectMatch: true },
-        { id: '2', name: { en: 'Old Cataract Hotel', ar: 'فندق أولد كتاركت' }, city: 'Aswan', stars: 5, averagePricePerNight: 25000, currency: 'EGP', coverImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400', rating: 4.8, reviews: 890, amenities: ['Free WiFi', 'Pool', 'Spa', 'Nile View'], aiMatch: 98, aiPerfectMatch: true },
-        { id: '3', name: { en: 'Ritz-Carlton Cairo', ar: 'ريتز كارلتون القاهرة' }, city: 'Cairo', stars: 5, averagePricePerNight: 18000, currency: 'EGP', coverImage: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400', rating: 4.9, reviews: 1100, amenities: ['Free WiFi', 'Pool', 'Spa', 'Pyramid View'], aiMatch: 92, aiPerfectMatch: false },
-      ];
-      setResults(mockResults);
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Search failed');
-    } finally {
-      setIsSearching(false);
-    }
+  const results = hasSearched ? (hotelsResponse?.data || []) : [];
+
+  const handleSearch = (queryText: string) => {
+    if (!queryText.trim()) return;
+    setSearchQuery(queryText);
+    setSearchInput(queryText);
+    setHasSearched(true);
   };
 
-  const clearFilters = () => {
-    setSelectedCity('');
-    setSelectedStars(null);
-    setMinPrice('');
-    setMaxPrice('');
-    setSelectedAmenities([]);
+  const toggleFavorite = (hotel: any) => {
+    toggleHotelFavorite(hotel);
   };
-
-  const hasActiveFilters = selectedCity || selectedStars || minPrice || maxPrice || selectedAmenities.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Search & AI Chat */}
-        <View className="px-4 py-4">
-          <SearchBar
-            placeholder={t('aiHotelSearch.searchPlaceholder')}
-            value={query}
-            onChangeText={setQuery}
-            className="mb-4"
-          />
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+      {/* Top Header */}
+      <View 
+        className="flex-row justify-between items-center px-4 border-b z-50"
+        style={{
+          paddingTop: insets.top,
+          height: 56 + insets.top,
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.outlineVariant + '33',
+        }}
+      >
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity onPress={() => router.push('/(tabs)/hotel')} className="p-2 active:scale-95">
+            <Ionicons name="arrow-back" size={24} color="#C8922A" />
+          </TouchableOpacity>
+          <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+        </View>
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => setIsMenuOpen(true)} className="p-1 active:scale-95">
+            <Ionicons name="menu-outline" size={24} color="#C8922A" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          <View className="mt-4 flex-row items-center gap-3">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+        <View className="p-4 md:p-10 max-w-[1200px] mx-auto w-full">
+          
+          {/* Search Header Input */}
+          <View 
+            className="relative flex-row items-center border-2 rounded-full px-5 py-4 shadow-sm mb-6"
+            style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '66' }}
+          >
+            <Ionicons name="sparkles" size={20} color="#C8922A" className="mr-3" />
+            <TextInput
+              className="flex-1 text-body-lg font-body text-on-surface"
+              style={{ color: colors.onSurface }}
+              placeholder="Type your dream hotel query (e.g. Nile view Luxor)..."
+              placeholderTextColor={colors.onSurfaceVariant + '80'}
+              value={searchInput}
+              onChangeText={setSearchInput}
+              onSubmitEditing={() => handleSearch(searchInput)}
+            />
             <TouchableOpacity
-              onPress={() => router.push('/(tabs)/ai')}
-              className="flex-1 bg-primary/5 border border-primary/30 rounded-xl p-4 flex-row items-center gap-3"
+              onPress={() => handleSearch(searchInput)}
+              className="bg-pharaoh-gold px-6 py-2.5 rounded-full active:scale-95"
             >
-              <View className="w-12 h-12 rounded-xl bg-primary/10 flex-items-center justify-center">
-                <Ionicons name="sparkles" size={24} color="#C8922A" />
-              </View>
-              <View>
-                <Text className="text-label-md font-medium text-primary">{t('aiHotelSearch.aiPowered')}</Text>
-                <Text className="text-label-sm text-primary/80 mt-1">{t('aiHotelSearch.backToHotels')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#C8922A" />
+              <Text className="text-white text-label-sm font-semibold">Search</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Quick Filters */}
-          <View className="mt-4 gap-3">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2">
-              <TouchableOpacity
-                onPress={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 rounded-full ${showFilters ? 'bg-primary text-on-primary' : 'bg-surface-container border border-outline-variant'}`}
-              >
-                <Text className="text-label-md">{t('hotelListing.aiSearchNav')}</Text>
-              </TouchableOpacity>
-              {CITIES.slice(0, 5).map((city) => (
+          {/* Initial Welcome State (if user hasn't searched yet) */}
+          {!hasSearched && (
+            <View className="items-center justify-center py-16 px-6 text-center">
+              <View className="w-20 h-20 mb-6 bg-pharaoh-gold/10 rounded-full items-center justify-center">
+                <Ionicons name="sparkles" size={36} color="#C8922A" />
+              </View>
+              <Text className="font-headline text-headline-md-mobile mb-2 text-center" style={{ color: colors.onSurface }}>
+                AI-Powered Hotel Assistant
+              </Text>
+              <Text className="font-body text-body-md mb-8 text-center max-w-md" style={{ color: colors.onSurfaceVariant }}>
+                Describe your dream stay in natural language. We'll search our backend database to match heritage hotels for you.
+              </Text>
+              
+              <View className="w-full gap-3">
                 <TouchableOpacity
-                  key={city}
-                  onPress={() => setSelectedCity(selectedCity === city ? '' : city)}
-                  className={`px-4 py-2 rounded-full border ${selectedCity === city ? 'bg-primary border-primary text-on-primary' : 'bg-surface-container border-outline-variant text-on-surface'}`}
+                  onPress={() => handleSearch("Find hotels near Luxor Temple")}
+                  className="w-full py-4 px-6 border rounded-xl flex-row items-center justify-between active:scale-[0.98]"
+                  style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
                 >
-                  <Text className="text-label-md">{city}</Text>
+                  <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>"Find hotels near Luxor Temple"</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#C8922A" />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Active Filters */}
-          {hasActiveFilters && (
-            <View className="mt-4">
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-label-md text-on-surface-variant">{t('hotelListing.activeFilters')}</Text>
-                <TouchableOpacity onPress={clearFilters}>
-                  <Text className="text-label-md text-primary">{t('hotelListing.clearAll')}</Text>
+                <TouchableOpacity
+                  onPress={() => handleSearch("Luxury stays in Cairo")}
+                  className="w-full py-4 px-6 border rounded-xl flex-row items-center justify-between active:scale-[0.98]"
+                  style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                >
+                  <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>"Luxury stays in Cairo"</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#C8922A" />
                 </TouchableOpacity>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2">
-                {selectedCity && (
-                  <Badge variant="blue" className="flex-row items-center gap-1">
-                    <Ionicons name="location-outline" size={14} />
-                    <Text>{selectedCity}</Text>
-                    <TouchableOpacity onPress={() => setSelectedCity('')} className="ml-1">
-                      <Ionicons name="close" size={14} />
-                    </TouchableOpacity>
-                  </Badge>
-                )}
-                {selectedStars && (
-                  <Badge variant="gold" className="flex-row items-center gap-1">
-                    {[...Array(selectedStars)].map((_, i) => <Ionicons key={i} name="star" size={14} />)}
-                    <TouchableOpacity onPress={() => setSelectedStars(null)} className="ml-1">
-                      <Ionicons name="close" size={14} />
-                    </TouchableOpacity>
-                  </Badge>
-                )}
-                {minPrice && (
-                  <Badge variant="green" className="flex-row items-center gap-1">
-                    <Ionicons name="cash-outline" size={14} />
-                    <Text>{minPrice}+</Text>
-                    <TouchableOpacity onPress={() => setMinPrice('')} className="ml-1">
-                      <Ionicons name="close" size={14} />
-                    </TouchableOpacity>
-                  </Badge>
-                )}
-                {maxPrice && (
-                  <Badge variant="green" className="flex-row items-center gap-1">
-                    <Ionicons name="cash-outline" size={14} />
-                    <Text>{maxPrice} max</Text>
-                    <TouchableOpacity onPress={() => setMaxPrice('')} className="ml-1">
-                      <Ionicons name="close" size={14} />
-                    </TouchableOpacity>
-                  </Badge>
-                )}
-                {selectedAmenities.map((amenity, i) => (
-                  <Badge key={i} variant="blue" className="flex-row items-center gap-1">
-                    <Text>{amenity}</Text>
-                    <TouchableOpacity onPress={() => setSelectedAmenities(prev => prev.filter(a => a !== amenity))} className="ml-1">
-                      <Ionicons name="close" size={14} />
-                    </TouchableOpacity>
-                  </Badge>
-                ))}
-              </ScrollView>
             </View>
           )}
-        </View>
 
-        {/* AI Chat Response */}
-        {results.length > 0 && !isSearching && (
-          <View className="px-4 mb-4">
-            <Card className="bg-primary/5 border border-primary/20" style={{ borderRadius: 16 }}>
-              <CardContent>
-                <View className="flex-row items-start gap-3">
-                  <View className="p-2 rounded-xl bg-primary/10">
-                    <Ionicons name="sparkles" size={20} color="#C8922A" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-label-md font-medium text-primary mb-1">{t('aiHotelSearch.aiResponse')}</Text>
-                    <Text className="text-body-md text-on-surface-variant mb-3">
-                      {t('aiHotelSearch.matchedHotels', { count: results.length })}
-                    </Text>
-                    <View className="flex-row gap-2">
-                      <TouchableOpacity onPress={() => {}} className="bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant">
-                        <Text className="text-label-sm">{t('aiHotelSearch.copyResponse')}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleSearch(query)} className="bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant">
-                        <Text className="text-label-sm">{t('aiHotelSearch.newSearch')}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-          </View>
-        )}
-
-        {/* Results */}
-        <View className="px-4">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-headline-md-mobile font-headline text-on-surface">{t('hotelListing.resultsTitle')}</Text>
-            {results.length > 0 && (
-              <Text className="text-label-md text-on-surface-variant">
-                {t('hotelListing.showingResults', { count: results.length })}
-              </Text>
-            )}
-          </View>
-
-          {isLoading || isSearching ? (
-            <View className="flex-1 items-center justify-center py-20">
+          {/* Loading Indicator */}
+          {isLoading && hasSearched && (
+            <View className="py-20 justify-center items-center">
               <ActivityIndicator size="large" color="#C8922A" />
-              <Text className="text-on-surface-variant mt-4">{t('common.loading')}</Text>
             </View>
-          ) : results.length === 0 ? (
-            <View className="items-center py-20">
-              <Ionicons name="compass-outline" size={64} color="#827564" />
-              <Text className="text-headline-md font-headline text-on-surface mt-4 mb-2">
-                {t('hotelListing.noExactMatches')}
-              </Text>
-              <Text className="text-on-surface-variant text-center px-8">
-                {t('hotelListing.noExactMatchesDesc')}
-              </Text>
-              <Button variant="outline" className="mt-4 w-auto" onPress={() => setQuery('')}>
-                {t('hotelListing.tryNewSearch')}
-              </Button>
-            </View>
-          ) : (
-            <View className="gap-4">
-              {results.map((hotel) => (
-                <TouchableOpacity key={hotel.id} className="w-full" onPress={() => router.push(`/hotel/${hotel.id}`)}>
-                  <Card className="p-0 overflow-hidden">
-                    <View className="relative h-48">
-                      <Image
-                        source={{ uri: hotel.coverImage }}
-                        style={{ width: '100%', height: '100%' }}
-                        resizeMode="cover"
-                      />
-                      <View className="absolute top-3 left-3">
-                        <Badge variant="gold">{hotel.stars}★</Badge>
-                      </View>
-                      <View className="absolute top-3 right-3">
-                        <Badge variant="green">{hotel.rating} ({hotel.reviews})</Badge>
+          )}
+
+          {/* Search Results Grid */}
+          {!isLoading && hasSearched && (
+            <View className="flex-col gap-6">
+              {results.map((hotel) => {
+                const isFav = favoriteHotels.some(h => h._id === hotel._id);
+                const mockRating = (4.5 + (hotel.stars * 0.08)).toFixed(1);
+                
+                return (
+                  <Card key={hotel._id} className="p-0 overflow-hidden border rounded-xl shadow-resting" style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}>
+                    <View className="relative h-72">
+                      <Image source={{ uri: hotel.coverImage }} className="w-full h-full" resizeMode="cover" />
+                      {hotel.stars === 5 && (
+                        <View className="absolute top-4 left-4 bg-pharaoh-gold px-3 py-1 rounded-full flex-row items-center gap-1 shadow-md">
+                          <Ionicons name="sparkles" size={12} color="white" />
+                          <Text className="text-white text-label-sm font-semibold uppercase tracking-wider">Rahal Choice</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        onPress={() => toggleFavorite(hotel)}
+                        className="absolute top-4 right-4 p-2 rounded-full shadow-sm"
+                        style={{ backgroundColor: isDark ? 'rgba(28, 26, 20, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        <Ionicons name={isFav ? "heart" : "heart-outline"} size={20} color={isFav ? "#BA1A1A" : colors.onSurfaceVariant} />
+                      </TouchableOpacity>
+                      <View className="absolute bottom-4 left-4 flex-row items-center gap-1 bg-black/40 px-2 py-1 rounded-lg">
+                        <Ionicons name="star" size={14} color="#C8922A" />
+                        <Text className="text-white font-bold text-label-sm">{mockRating}</Text>
                       </View>
                     </View>
-                    <CardContent>
-                      <View className="flex-row items-start justify-between gap-2 mb-2">
-                        <View className="flex-1">
-                          <Text className="text-headline-md-mobile font-headline text-on-surface" numberOfLines={1}>
-                            {hotel.name.en}
-                          </Text>
-                          <View className="flex-row items-center gap-2 mt-2">
-                            <Ionicons name="location-outline" size={14} color="#827564" />
-                            <Text className="text-body-md text-on-surface-variant">{hotel.city}</Text>
-                          </View>
+                    <CardContent className="p-6">
+                      <View className="flex-row justify-between items-start mb-2">
+                        <View className="flex-1 pr-4">
+                          <Text className="text-label-sm uppercase tracking-widest mb-1" style={{ color: colors.outline }}>{hotel.city}, Egypt</Text>
+                          <Text className="font-headline text-headline-md-mobile leading-tight" style={{ color: colors.onSurface }}>{hotel.name.en}</Text>
                         </View>
-                        <View className="text-right">
-                          <Text className="text-body-lg font-bold text-primary">{formatCurrency(hotel.averagePricePerNight, hotel.currency)}</Text>
-                          <Text className="text-label-sm text-on-surface-variant">/ night</Text>
+                        <View className="items-end">
+                          <Text className="font-headline text-headline-md-mobile text-pharaoh-gold" style={{ color: colors.pharaohGold }}>
+                            {formatCurrency(hotel.averagePricePerNight, hotel.currency)}
+                          </Text>
+                          <Text className="text-xs" style={{ color: colors.outline }}>per night</Text>
                         </View>
                       </View>
-                      <Text className="text-body-md text-on-surface-variant line-clamp-2 mb-3">
-                        {hotel.description?.en || 'Luxury hotel with exceptional service and stunning views.'}
+                      <Text className="font-body text-body-md mt-2 mb-6" style={{ color: colors.onSurfaceVariant }} numberOfLines={3}>
+                        {hotel.description?.en || "Enjoy a premium stay featuring classic design accents, direct city access, and world-class service."}
                       </Text>
-                      <View className="flex-row items-center justify-between mt-3">
-                        <View className="flex-row items-center gap-2">
-                          <Badge variant={hotel.aiPerfectMatch ? 'sparkle' : 'gold'} className="gap-1">
-                            <Ionicons name={hotel.aiPerfectMatch ? 'sparkles' : 'checkmark-circle'} size={14} />
-                            <Text>{hotel.aiPerfectMatch ? t('aiHotelSearch.aiPerfectMatch') : t('aiHotelSearch.aiExactMatch')}</Text>
-                          </Badge>
-                        </View>
-                        <View className="flex-row items-center gap-2">
-                          <Button variant="outline" size="sm" className="ml-2">
-                            {t('hotelListing.viewDetails')}
-                          </Button>
-                        </View>
+                      <View className="flex-row gap-3">
+                        <TouchableOpacity
+                          onPress={() => router.push(`/hotel/${hotel.slug}`)}
+                          className="flex-1 bg-pharaoh-gold py-3.5 rounded-full items-center active:scale-95"
+                        >
+                          <Text className="text-white font-label-md font-bold uppercase tracking-wider">Book Stay</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => toggleFavorite(hotel)}
+                          className="w-12 h-12 items-center justify-center border rounded-full active:scale-95"
+                          style={{ borderColor: colors.outlineVariant + '66' }}
+                        >
+                          <Ionicons name={isFav ? "bookmark" : "bookmark-outline"} size={20} color="#C8922A" />
+                        </TouchableOpacity>
                       </View>
                     </CardContent>
                   </Card>
-                </TouchableOpacity>
-              ))}
+                );
+              })}
+
+              {/* No results state */}
+              {results.length === 0 && (
+                <View className="items-center justify-center py-16 px-6">
+                  <Ionicons name="search-outline" size={48} color={colors.onSurfaceVariant} />
+                  <Text className="font-headline text-headline-md-mobile mt-4 mb-2" style={{ color: colors.onSurface }}>No Matching Hotels</Text>
+                  <Text className="text-center font-body mb-6" style={{ color: colors.onSurfaceVariant }}>
+                    We couldn't find any hotels in our database matching "{searchQuery}". Try refining your keywords.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
-          {/* Load More */}
-          <View className="px-4 py-4">
-            <Button variant="outline" fullWidth>
-              {t('hotelListing.loadMore')}
-            </Button>
-          </View>
+          {/* Heritage Divider */}
+          {hasSearched && (
+            <View className="flex-row items-center gap-4 py-16">
+              <View className="h-[1px] flex-1 bg-pharaoh-gold/20" />
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="star-outline" size={14} color="#C8922A" />
+                <Ionicons name="sparkles" size={20} color="#C8922A" />
+                <Ionicons name="star-outline" size={14} color="#C8922A" />
+              </View>
+              <View className="h-[1px] flex-1 bg-pharaoh-gold/20" />
+            </View>
+          )}
+
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Dropdown Menu Modal */}
+      {isMenuOpen && (
+        <View className="absolute inset-0 z-[100] flex-row">
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={() => setIsMenuOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <View 
+            className="w-[75%] max-w-[300px] h-full shadow-2xl p-6 justify-between border-r"
+            style={{ 
+              backgroundColor: colors.surface, 
+              borderColor: colors.outlineVariant + '33' 
+            }}
+          >
+            <View>
+              <View className="flex-row justify-between items-center mb-8 mt-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
+                    <Ionicons name="compass" size={20} color="#C8922A" />
+                  </View>
+                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">Rahal</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
+                  <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
+                </TouchableOpacity>
+              </View>
+
+              <View className="gap-1">
+                {[
+                  { label: t('common.nav.home', 'Home'), icon: 'home-outline', route: '/(tabs)' },
+                  { label: t('common.nav.destinations', 'Explore'), icon: 'compass-outline', route: '/(tabs)/explore' },
+                  { label: t('common.nav.hotels', 'Hotels'), icon: 'business-outline', route: '/(tabs)/hotel' },
+                  { label: t('common.nav.planner', 'AI Planner'), icon: 'sparkles-outline', route: '/(tabs)/ai' },
+                  { label: t('common.nav.trips', 'My Trips'), icon: 'map-outline', route: '/(tabs)/trips' },
+                  { label: t('common.nav.profile', 'Profile'), icon: 'person-outline', route: '/(tabs)/profile' },
+                ].map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      setIsMenuOpen(false);
+                      router.push(item.route as any);
+                    }}
+                    className="flex-row items-center gap-4 py-3.5 px-4 rounded-xl"
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={item.icon as any} size={20} color="#C8922A" />
+                    <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>{item.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View className="gap-6 pt-6 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
+              <View className="flex-row justify-between items-center">
+                <Text className="font-semibold text-label-md" style={{ color: colors.onSurfaceVariant }}>{t('common.language', 'Language')}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const newLang = i18n.language === 'en' ? 'ar' : 'en';
+                    i18n.changeLanguage(newLang);
+                  }}
+                  className="bg-pharaoh-gold/10 px-3 py-1 rounded-lg border border-pharaoh-gold/20"
+                >
+                  <Text className="text-pharaoh-gold font-bold text-label-sm">{i18n.language === 'en' ? 'العربية' : 'English'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Login / Logout Button */}
+              {isAuthenticated ? (
+                <TouchableOpacity
+                  onPress={async () => {
+                    setIsMenuOpen(false);
+                    logout();
+                    router.replace('/(onboarding)');
+                  }}
+                  className="w-full h-12 border border-tertiary rounded-full flex-row items-center justify-center gap-2"
+                  style={{ borderColor: '#8F1301' }}
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#8F1301" />
+                  <Text className="text-tertiary text-label-md font-bold uppercase tracking-wider">
+                    {t('common.nav.logout', 'Log Out')}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => {
+                    setIsMenuOpen(false);
+                    router.push('/(auth)/login');
+                  }}
+                  className="w-full h-12 bg-primary rounded-full flex-row items-center justify-center gap-2"
+                >
+                  <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                  <Text className="text-white text-label-md font-bold uppercase tracking-wider">
+                    {t('common.nav.login', 'Log In')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }

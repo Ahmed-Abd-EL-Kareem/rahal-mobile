@@ -1,5 +1,5 @@
 // src/hooks/useBookingPayment.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { api } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
@@ -74,7 +74,7 @@ export function useSubscriptionUpgrade() {
   return { upgrade: upgrade.mutateAsync, isPending: upgrade.isPending };
 }
 
-export function usePaymentStatus(bookingId: string) {
+export function useBookingPaymentStatus(bookingId: string) {
   return useQuery({
     queryKey: queryKeys.paymentStatus(bookingId),
     queryFn: () => api.get(`payments/booking/status/${bookingId}`).json<{

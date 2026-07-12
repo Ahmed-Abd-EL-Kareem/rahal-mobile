@@ -43,7 +43,7 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
             paymentIntentClientSecret: data.data.paymentIntentClientSecret,
             customerId: data.data.customerId,
             customerEphemeralKeySecret: data.data.ephemeralKeySecret,
-            style: 'always', // or 'automatic' for dark mode
+            style: 'automatic', // or 'automatic' for dark mode
             returnURL: 'rahal://booking/payment-return',
           });
 

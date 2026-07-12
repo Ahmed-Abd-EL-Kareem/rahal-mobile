@@ -1,235 +1,46 @@
 // app/favorites.tsx
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, Image, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, Image, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { Card, Badge, Button } from '@/components/ui';
-import { useTheme } from '@/hooks/useTheme';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useRouter } from 'expo-router';
-
-function RenderHotelCard({
-  hotel,
-  router,
-  onRemove,
-}: {
-  hotel: any;
-  router: any;
-  onRemove: (id: string) => void;
-}) {
-  return (
-    <TouchableOpacity
-      key={hotel._id}
-      onPress={() => router.push(`/hotel/${hotel._id}`)}
-      className="w-full"
-    >
-      <Card className="flex-row p-0 overflow-hidden" style={{ borderRadius: 16 }}>
-        <View className="w-32 flex-shrink-0">
-          <Image
-            source={{ uri: hotel.coverImage }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        </View>
-        <View className="flex-1 p-4">
-          <View className="flex-row items-start justify-between gap-2 mb-2">
-            <View className="flex-1">
-              <Text
-                className="text-headline-md-mobile font-headline text-on-surface"
-                numberOfLines={1}
-              >
-                {hotel.name.en}
-              </Text>
-              <View className="flex-row items-center gap-2 mt-1">
-                <Text className="text-body-md text-on-surface-variant">{hotel.city}</Text>
-                {[...Array(hotel.stars)].map((_, i) => (
-                  <Ionicons key={i} name="star" size={14} color="#F8BC51" />
-                ))}
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={(e) => {
-                e.stopPropagation();
-                onRemove(hotel._id);
-              }}
-              className="p-2 rounded-lg bg-surface-container"
-            >
-              <MaterialIcons name="favorite" size={24} color="#C8922A" />
-            </TouchableOpacity>
-          </View>
-          <View className="mt-3 flex-row items-center justify-between">
-            <View>
-              <Text className="text-body-lg font-bold text-primary">
-                {hotel.averagePricePerNight} {hotel.currency}
-              </Text>
-              <Text className="text-label-sm text-on-surface-variant">/ night</Text>
-            </View>
-          </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
-}
-
-function RenderDestinationCard({
-  dest,
-  router,
-  onRemove,
-}: {
-  dest: any;
-  router: any;
-  onRemove: (id: string) => void;
-}) {
-  return (
-    <TouchableOpacity
-      key={dest._id}
-      onPress={() => router.push(`/destination/${dest.slug}`)}
-      className="w-full"
-    >
-      <Card className="flex-row p-0 overflow-hidden" style={{ borderRadius: 16 }}>
-        <View className="w-32 flex-shrink-0">
-          <Image
-            source={{ uri: dest.coverImage }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        </View>
-        <View className="flex-1 p-4">
-          <Text className="text-headline-md-mobile font-headline text-on-surface mb-1">
-            {dest.name.en}
-          </Text>
-          <View className="flex-row items-center gap-2 text-on-surface-variant mb-2">
-            <MaterialIcons name="location-on" size={16} />
-            <Text className="text-body-md">
-              {dest.city}, {dest.region}
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Badge variant="blue">{dest.category}</Badge>
-            <Text className="text-label-md text-on-surface-variant">
-              {dest.averageBudgetPerDay} {dest.currency} / day
-            </Text>
-          </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
-}
-
-function EmptyState({ router, icon }: { router: any; icon: string }) {
-  const { t } = useTranslation();
-  return (
-    <View className="items-center py-20">
-      <MaterialIcons name={icon as any} size={64} color="#827564" />
-      <Text className="text-headline-md font-headline text-on-surface mt-4 mb-2">
-        {t('favoritesPage.emptyTitle')}
-      </Text>
-      <Text className="text-on-surface-variant text-center px-8">
-        {t('favoritesPage.emptySubtitle')}
-      </Text>
-      <Button
-        variant="outline"
-        className="mt-4 w-auto"
-        onPress={() => router.push('/(tabs)/explore')}
-      >
-        {t('favoritesPage.exploreBtn')}
-      </Button>
-    </View>
-  );
-}
+import { useColorScheme } from 'nativewind';
+import { useFavoritesStore } from '@/store/favoritesStore';
 
 export default function FavoritesScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar' : 'en';
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const { isAuthenticated } = useAuthStore();
   const { showToast } = useUIStore();
-  const [favoriteHotels, setFavoriteHotels] = useState<any[]>([]);
-  const [favoriteDestinations, setFavoriteDestinations] = useState<any[]>([]);
+  const { colorScheme } = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+
+  const { 
+    favoriteHotels, 
+    favoriteDestinations, 
+    removeHotelFavorite, 
+    removeDestinationFavorite 
+  } = useFavoritesStore();
+
   const [activeTab, setActiveTab] = useState<'hotels' | 'destinations'>('hotels');
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadFavorites();
-    }
-  }, [isAuthenticated, user]);
-
-  const loadFavorites = () => {
-    // Mock data - replace with actual API call
-    const mockHotels = [
-      {
-        _id: '1',
-        name: { en: 'Old Cataract Hotel', ar: 'فندق أولد كتاركت' },
-        city: 'Aswan',
-        stars: 5,
-        averagePricePerNight: 450,
-        currency: 'USD',
-        coverImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400',
-        isActive: true,
-      },
-      {
-        _id: '2',
-        name: { en: 'The Ritz-Carlton, Cairo', ar: 'ريتز كارلتون، القاهرة' },
-        city: 'Cairo',
-        stars: 5,
-        averagePricePerNight: 320,
-        currency: 'USD',
-        coverImage: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400',
-        isActive: true,
-      },
-      {
-        _id: '3',
-        name: { en: 'Four Seasons Sharm El Sheikh', ar: 'فور سيزونز شرم الشيخ' },
-        city: 'Sharm El-Sheikh',
-        stars: 5,
-        averagePricePerNight: 580,
-        currency: 'USD',
-        coverImage: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400',
-        isActive: true,
-      },
-    ];
-
-    const mockDestinations = [
-      {
-        _id: 'd1',
-        name: { en: 'Luxor', ar: 'الأقصر' },
-        slug: 'luxor',
-        city: 'Luxor',
-        region: 'Upper Egypt',
-        category: 'historical',
-        coverImage: 'https://images.unsplash.com/photo-1539650116574-75c0c6d73c6e?w=400',
-        averageBudgetPerDay: 280,
-        currency: 'USD',
-      },
-      {
-        _id: 'd2',
-        name: { en: 'Siwa Oasis', ar: 'واحة سيوة' },
-        slug: 'siwa',
-        city: 'Siwa',
-        region: 'Western Desert',
-        category: 'nature',
-        coverImage: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=400',
-        averageBudgetPerDay: 290,
-        currency: 'USD',
-      },
-    ];
-
-    setFavoriteHotels(mockHotels);
-    setFavoriteDestinations(mockDestinations);
-  };
 
   const handleRemoveHotel = (hotelId: string) => {
     Alert.alert(
-      'Remove from favorites?',
-      'This hotel will be removed from your saved sanctuaries.',
+      'Remove Favorite?',
+      'This hotel will be removed from your saved treasures.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: () => {
-            setFavoriteHotels((prev) => prev.filter((h) => h._id !== hotelId));
-            showToast?.({ type: 'success', message: 'Removed from your sanctuaries.' });
+            removeHotelFavorite(hotelId);
+            showToast({ type: 'success', message: 'Removed from favorites' });
           },
         },
       ]
@@ -238,16 +49,16 @@ export default function FavoritesScreen() {
 
   const handleRemoveDestination = (destId: string) => {
     Alert.alert(
-      'Remove from favorites?',
-      'This destination will be removed from your saved wonders.',
+      'Remove Favorite?',
+      'This destination will be removed from your saved treasures.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: () => {
-            setFavoriteDestinations((prev) => prev.filter((d) => d._id !== destId));
-            showToast?.({ type: 'success', message: 'Removed from your wonders.' });
+            removeDestinationFavorite(destId);
+            showToast({ type: 'success', message: 'Removed from favorites' });
           },
         },
       ]
@@ -256,99 +67,219 @@ export default function FavoritesScreen() {
 
   if (!isAuthenticated) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="w-24 h-24 rounded-full bg-primary/10 items-center justify-center mb-6">
-            <MaterialIcons name="bookmark-border" size={48} color="#C8922A" />
-          </View>
-          <Text className="text-headline-md font-headline text-on-surface text-center mb-2">
-            {t('favoritesPage.loginRequiredTitle')}
+      <View style={{ paddingTop: insets.top }} className="flex-1 bg-background dark:bg-obsidian justify-center items-center p-6">
+        <Image source={require('../assets/logo-2.png')} style={{ width: 80, height: 80, marginBottom: 16 }} resizeMode="contain" />
+        <Text className="text-3xl font-headline text-pharaoh-gold mb-2">Rahal</Text>
+        <Text className="text-body-md text-on-surface-variant dark:text-outline text-center mb-8 px-6">
+          Log in or sign up to view and manage your saved hotels and destinations.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(auth)/login')}
+          className="w-full h-12 bg-pharaoh-gold rounded-full justify-center items-center shadow-md active:scale-95"
+        >
+          <Text className="text-white font-semibold uppercase tracking-wider text-label-md">
+            Log In / Sign Up
           </Text>
-          <Text className="text-body-md text-on-surface-variant text-center mb-6 px-8">
-            {t('favoritesPage.loginRequiredSubtitle')}
-          </Text>
-          <Button onPress={() => router.push('/(auth)/login')}>
-            {t('favoritesPage.loginBtn')}
-          </Button>
-        </View>
-      </SafeAreaView>
+        </TouchableOpacity>
+      </View>
     );
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-4 py-4">
-          {/* Header */}
-          <View className="flex-row items-center justify-between mb-6">
-            <View>
-              <Text className="text-display-lg-mobile font-headline text-on-surface">
-                {t('favoritesPage.title')}
-              </Text>
-              <Text className="text-body-md text-on-surface-variant mt-1">
-                {t('favoritesPage.subtitle')}
-              </Text>
-            </View>
-          </View>
+  const showHotels = activeTab === 'hotels';
+  const showDestinations = activeTab === 'destinations';
+  const hasItems = showHotels ? favoriteHotels.length > 0 : favoriteDestinations.length > 0;
 
-          {/* Tab Selector */}
-          <View className="flex-row gap-2 mb-6 bg-surface-container rounded-xl p-1">
+  return (
+    <View style={{ paddingTop: insets.top }} className="flex-1 bg-background dark:bg-obsidian">
+      {/* Top App Bar */}
+      <View className="h-16 flex-row justify-between items-center px-4 border-b border-outline-variant/10 bg-surface dark:bg-obsidian">
+        <TouchableOpacity onPress={() => router.back()} className="p-2 active:scale-95">
+          <Ionicons name="arrow-back-outline" size={24} color="#C8922A" />
+        </TouchableOpacity>
+        <Text className="text-headline-md-mobile font-headline text-pharaoh-gold">Rahal</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/ai')} className="p-2 active:scale-95">
+          <Ionicons name="sparkles-outline" size={22} color="#C8922A" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        className="flex-1 px-4 mt-4"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }}
+      >
+        {/* Page Title */}
+        <View className="items-center mt-6 mb-8">
+          <Text className="text-3xl font-headline text-primary dark:text-primary-fixed mb-6 text-center">
+            My Treasures
+          </Text>
+
+          {/* Segmented Control */}
+          <View className="flex-row bg-surface-container-low dark:bg-sand-dark rounded-full p-1 border border-outline-variant/40 self-center">
             <TouchableOpacity
               onPress={() => setActiveTab('hotels')}
-              className={`flex-1 py-2 px-4 rounded-lg flex-row items-center justify-center gap-2 ${
-                activeTab === 'hotels' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'
-              }`}
+              className="px-8 py-2.5 rounded-full"
+              style={showHotels ? { backgroundColor: '#C8922A' } : null}
             >
-              <MaterialIcons name="hotel" size={20} />
-              <Text className="text-label-md font-medium">{t('common.nav.favorites')}</Text>
+              <Text 
+                className="text-label-md font-semibold"
+                style={{ color: showHotels ? '#FFFFFF' : (isDarkMode ? '#9C8F7C' : '#4F4537') }}
+              >
+                Hotels
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setActiveTab('destinations')}
-              className={`flex-1 py-2 px-4 rounded-lg flex-row items-center justify-center gap-2 ${
-                activeTab === 'destinations'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant'
-              }`}
+              className="px-8 py-2.5 rounded-full"
+              style={showDestinations ? { backgroundColor: '#C8922A' } : null}
             >
-              <MaterialIcons name="location-on" size={20} />
-              <Text className="text-label-md font-medium">
-                {t('common.nav.favoriteDestinations')}
+              <Text 
+                className="text-label-md font-semibold"
+                style={{ color: showDestinations ? '#FFFFFF' : (isDarkMode ? '#9C8F7C' : '#4F4537') }}
+              >
+                Destinations
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Content */}
-          {activeTab === 'hotels' ? (
-            favoriteHotels.length === 0 ? (
-              <EmptyState router={router} icon="hotel" />
-            ) : (
-              <View className="gap-4">
-                {favoriteHotels.map((hotel) => (
-                  <RenderHotelCard
-                    key={hotel._id}
-                    hotel={hotel}
-                    router={router}
-                    onRemove={handleRemoveHotel}
-                  />
-                ))}
-              </View>
-            )
-          ) : favoriteDestinations.length === 0 ? (
-            <EmptyState router={router} icon="location-on" />
-          ) : (
-            <View className="gap-4">
-              {favoriteDestinations.map((dest) => (
-                <RenderDestinationCard
-                  key={dest._id}
-                  dest={dest}
-                  router={router}
-                  onRemove={handleRemoveDestination}
-                />
-              ))}
+        {/* Content list */}
+        {!hasItems ? (
+          /* Empty State */
+          <View className="flex-col items-center justify-center py-20 text-center">
+            <View className="relative w-44 h-44 mb-8 justify-center items-center">
+              <View className="absolute inset-0 bg-pharaoh-gold/5 dark:bg-pharaoh-gold/10 rounded-full" />
+              <Ionicons name="heart-dislike-outline" size={80} color="rgba(200,146,42,0.3)" />
             </View>
-          )}
+            <Text className="text-headline-md font-headline text-primary dark:text-primary-fixed mb-3">
+              Your Map is Empty
+            </Text>
+            <Text className="text-on-surface-variant dark:text-outline text-body-md max-w-xs text-center mb-8 leading-relaxed">
+              The treasures of the Nile are waiting to be discovered. Start your journey by saving hotels or destinations that inspire you.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/explore')}
+              className="px-10 py-3.5 bg-pharaoh-gold rounded-full flex-row items-center gap-2 shadow-md active:scale-95"
+            >
+              <Ionicons name="compass-outline" size={18} color="#FFFFFF" />
+              <Text className="text-white font-semibold text-label-md">Explore Stays</Text>
+            </TouchableOpacity>
+          </View>
+        ) : showHotels ? (
+          /* Hotels Grid */
+          <View className="gap-6">
+            {favoriteHotels.map((hotel) => (
+              <View
+                key={hotel._id}
+                className="bg-surface-container-lowest dark:bg-sand-dark rounded-xl overflow-hidden border border-outline-variant/40 shadow-sm"
+              >
+                <View className="relative aspect-[4/3] w-full">
+                  <Image source={{ uri: hotel.coverImage }} className="w-full h-full object-cover" />
+                  <TouchableOpacity
+                    onPress={() => handleRemoveHotel(hotel._id)}
+                    className="absolute top-4 right-4 z-10 bg-black/30 p-2.5 rounded-full"
+                  >
+                    <Ionicons name="heart" size={20} color="#C8922A" />
+                  </TouchableOpacity>
+                  {(hotel.stars === 5 || (hotel as any).isPremium) && (
+                    <View className="absolute bottom-0 left-0 w-full p-3 bg-black/50">
+                      <Text className="text-[10px] font-bold text-white uppercase tracking-widest">
+                        Premium AI Choice
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View className="p-5">
+                  <View className="flex-row justify-between items-start mb-2">
+                    <Text className="text-headline-md-mobile font-headline text-primary dark:text-primary-fixed flex-1 pr-2">
+                      {typeof hotel.name === 'string' ? hotel.name : (hotel.name[locale] || hotel.name.en)}
+                    </Text>
+                    <View className="flex-row items-center mt-0.5">
+                      <Ionicons name="star" size={14} color="#C8922A" style={{ marginRight: 4 }} />
+                      <Text className="text-label-sm font-bold text-pharaoh-gold">
+                        {hotel.stars}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-on-surface-variant dark:text-outline text-body-md mb-4">
+                    {hotel.city} • {(hotel as any).type || (hotel.stars === 5 ? 'Luxury Sanctuary' : 'Boutique Hotel')}
+                  </Text>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-primary dark:text-primary-fixed font-bold text-lg">
+                      ${hotel.averagePricePerNight}
+                      <Text className="text-on-surface-variant dark:text-outline font-normal text-sm">/night</Text>
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/hotel/${hotel.slug}`)}
+                      className="px-6 py-2.5 bg-nile-blue rounded-full active:scale-95"
+                    >
+                      <Text className="text-white font-semibold text-label-md">Book Stay</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          /* Destinations Grid */
+          <View className="gap-6">
+            {favoriteDestinations.map((dest) => (
+              <View
+                key={dest._id}
+                className="relative aspect-video rounded-2xl overflow-hidden border border-outline-variant/40 shadow-sm"
+              >
+                {/* Image background & overlay */}
+                <Image source={{ uri: dest.coverImage }} className="w-full h-full object-cover absolute inset-0" />
+                <View className="absolute inset-0 bg-black/60" />
+
+                <TouchableOpacity
+                  onPress={() => handleRemoveDestination(dest._id)}
+                  className="absolute top-4 right-4 z-10 bg-black/30 p-2.5 rounded-full"
+                >
+                  <Ionicons name="heart" size={20} color="#C8922A" />
+                </TouchableOpacity>
+
+                <View className="absolute bottom-6 left-6 right-6">
+                  <View className="flex-row items-center gap-1.5 mb-1.5">
+                    <Ionicons name="location-outline" size={14} color="#C8922A" />
+                    <Text className="text-white/80 font-semibold uppercase tracking-wider text-[11px]">
+                      {dest.city}
+                    </Text>
+                  </View>
+                  <Text className="text-xl font-headline text-white mb-1">
+                    {typeof dest.name === 'string' ? dest.name : (dest.name[locale] || dest.name.en)}
+                  </Text>
+                  <Text className="text-white/70 text-body-md mb-4" numberOfLines={2}>
+                    {typeof dest.description === 'string' ? dest.description : (dest.description[locale] || dest.description.en)}
+                  </Text>
+                  <View className="flex-row items-center gap-4">
+                    <TouchableOpacity
+                      onPress={() => router.push(`/destination/${dest.slug}`)}
+                      className="px-5 py-2 bg-pharaoh-gold rounded-full active:scale-95"
+                    >
+                      <Text className="text-white font-semibold text-label-md">Explore Site</Text>
+                    </TouchableOpacity>
+                    <View className="flex-row items-center gap-1">
+                      <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.6)" />
+                      <Text className="text-white/60 text-label-sm">45 mins from center</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Heritage Divider */}
+        <View className="flex-row items-center justify-center gap-4 my-16">
+          <View className="h-[1px] flex-grow bg-pharaoh-gold/30" />
+          <View style={{ borderColor: '#C8922A', borderWidth: 1, padding: 2 }}>
+            <View style={{ borderColor: '#C8922A', borderWidth: 1, padding: 4 }} className="bg-surface dark:bg-sand-dark">
+              <Ionicons name="home-outline" size={16} color="#C8922A" />
+            </View>
+          </View>
+          <View className="h-[1px] flex-grow bg-pharaoh-gold/30" />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

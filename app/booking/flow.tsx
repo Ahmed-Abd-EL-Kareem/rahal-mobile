@@ -1,57 +1,76 @@
 // app/booking/flow.tsx
 import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ScrollView, View, Text, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, TextInput, Image } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import { Card, CardContent, Badge, Button, Input } from '@/components/ui';
-import { useHotel, useCreateBooking, useBookingPayment } from '@/api/hooks/useBookings';
-import { useAuthStore } from '@/store/authStore';
-import { useUIStore } from '@/store/uiStore';
+import { Ionicons } from '@expo/vector-icons';
+import { Card, CardContent, Button } from '@/components/ui';
+import { useCreateBooking } from '@/api/hooks/useBookings';
+import { useHotel } from '@/api/hooks/useHotels';
 import { formatCurrency } from '@/utils/currency';
-
-const BOOKING_STEPS = [
-  { key: 'dates', title: 'Dates', icon: 'calendar-outline' },
-  { key: 'room', title: 'Room', icon: 'bed-outline' },
-  { key: 'guests', title: 'Guests', icon: 'people-outline' },
-  { key: 'payment', title: 'Payment', icon: 'card-outline' },
-];
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function BookingFlowScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const params = useLocalSearchParams<{ hotelId?: string }>();
-  const { isAuthenticated, user } = useAuthStore();
-  const { showToast } = useUIStore();
+  const params = useLocalSearchParams<{
+    hotelId?: string;
+    roomType?: string;
+    pricePerNight?: string;
+    checkIn?: string;
+    checkOut?: string;
+    guests?: string;
+    rooms?: string;
+  }>();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [guests, setGuests] = useState(2);
-  const [rooms, setRooms] = useState(1);
+  const [checkIn, setCheckIn] = useState(params.checkIn || '2026-07-15');
+  const [checkOut, setCheckOut] = useState(params.checkOut || '2026-07-18');
+  const [guests, setGuests] = useState(params.guests ? parseInt(params.guests) : 2);
+  const [rooms, setRooms] = useState(params.rooms ? parseInt(params.rooms) : 1);
   const [specialRequests, setSpecialRequests] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [createdBookingId, setCreatedBookingId] = useState('');
 
-  const { data: hotel, isLoading } = useHotel(params.hotelId || '');
+  // Fetch real hotel details from backend
+  const { data: hotelResponse, isLoading } = useHotel(params.hotelId || '');
+  const hotel = hotelResponse?.data;
   const createBooking = useCreateBooking();
-  const { createCheckout } = useBookingPayment();
+
+  const [selectedRoom, setSelectedRoom] = useState<any>(null);
+
+  useEffect(() => {
+    if (hotel?.rooms) {
+      const room = hotel.rooms.find((r: any) => r.type === params.roomType) || hotel.rooms[0];
+      setSelectedRoom(room);
+    } else if (params.roomType) {
+      setSelectedRoom({
+        type: params.roomType,
+        pricePerNight: params.pricePerNight ? parseFloat(params.pricePerNight) : 320,
+        capacity: 2
+      });
+    }
+  }, [hotel, params.roomType]);
+
+  const totalNights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24))) || 3;
+  const roomPrice = selectedRoom?.pricePerNight || 320;
+  const subtotal = roomPrice * rooms * totalNights;
+  const aiDiscount = subtotal * 0.10;
+  const taxesAndFees = subtotal * 0.14;
+  const totalAmount = subtotal - aiDiscount + taxesAndFees;
 
   const handleNext = () => {
     if (currentStep === 0) {
       if (!checkIn || !checkOut) {
-        showToast({ type: 'error', message: 'Please select check-in and check-out dates' });
+        Alert.alert('Missing Info', 'Please specify check-in and check-out dates.');
         return;
       }
     }
-    if (currentStep === 1 && !selectedRoom) {
-      showToast({ type: 'error', message: 'Please select a room type' });
-      return;
-    }
-    if (currentStep < BOOKING_STEPS.length - 1) {
+    if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -61,318 +80,458 @@ export default function BookingFlowScreen() {
   };
 
   const handleBooking = async () => {
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Login Required',
-        'Please log in to complete your booking',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/(auth)/login') },
-        ]
-      );
-      return;
-    }
-
-    if (!selectedRoom || !checkIn || !checkOut) {
-      showToast({ type: 'error', message: 'Please complete all steps' });
+    if (!isAgreed) {
+      Alert.alert('Agreement Required', 'Please agree to the Heritage Terms of Service to complete your booking.');
       return;
     }
 
     setIsProcessing(true);
     try {
-      const booking = await createBooking.mutateAsync({
-        hotel: hotel?._id || '',
+      const response = await createBooking.mutateAsync({
+        hotel: hotel?._id || params.hotelId || '',
         checkIn,
         checkOut,
         guests,
         rooms,
         specialRequests,
       });
-      
-      // Create Stripe checkout session
-      const checkout = await createCheckout({ 
-        bookingId: booking.data._id, 
-        currency: hotel?.currency?.toLowerCase() || 'egp' 
-      });
-      
-      // In real app, open web browser for Stripe checkout
-      // For now, show success
-      showToast({ type: 'success', message: 'Booking created! Redirecting to payment...' });
-      router.push(`/booking/${booking.data._id}`);
+      if (response && response.data) {
+        setCreatedBookingId(response.data._id);
+        setShowSuccessOverlay(true);
+      } else {
+        throw new Error('No reservation details returned from backend.');
+      }
     } catch (error: any) {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Booking failed' });
+      Alert.alert('Booking Failed', error.response?.data?.message || 'Failed to complete your reservation. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (isLoading || !hotel) {
+  if (isLoading || !selectedRoom) {
     return (
-      <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#C8922A" />
-        </View>
-      </SafeAreaView>
+      <View className="flex-1 bg-background justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color="#C8922A" />
+      </View>
     );
   }
 
-  const h = hotel;
-  const currency = h.currency || 'EGP';
-
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      {/* Progress Indicator */}
-      <View className="px-4 py-4 border-b border-outline-variant">
-        <View className="flex-row items-center justify-between">
-          {BOOKING_STEPS.map((step, i) => (
-            <View key={step.key} className="flex-1 items-center">
-              <View className={`w-8 h-8 rounded-full flex-items-center justify-center ${
-                i <= currentStep ? 'bg-primary' : 'bg-outline-variant'
-              }`}>
-                {i < currentStep ? (
-                  <Ionicons name="checkmark" size={16} color="white" />
-                ) : (
-                  <Ionicons name={step.icon} size={16} color={i === currentStep ? 'white' : '#827564'} />
-                )}
-              </View>
-              <Text className={`text-label-sm mt-1 ${i <= currentStep ? 'text-primary font-medium' : 'text-on-surface-variant'}`}>
-                {t(`booking.steps.${step.key}`)}
-              </Text>
-            </View>
-          ))}
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+      
+      {/* Top Header */}
+      <View 
+        className="flex-row justify-between items-center px-4 border-b z-50"
+        style={{
+          paddingTop: insets.top,
+          height: 56 + insets.top,
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.outlineVariant + '33',
+        }}
+      >
+        <TouchableOpacity onPress={() => router.back()} className="p-2 active:scale-95">
+          <Ionicons name="arrow-back" size={24} color="#C8922A" />
+        </TouchableOpacity>
+        <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Secure Booking</Text>
+        <View className="w-10 h-10 rounded-full bg-pharaoh-gold/10 items-center justify-center">
+          <Ionicons name="sparkles" size={16} color="#C8922A" />
         </View>
+      </View>
 
-        {/* Connecting Lines */}
-        <View className="flex-row mt-2">
-          {BOOKING_STEPS.slice(0, -1).map((_, i) => (
-            <View key={i} className="flex-1 h-1" style={{ backgroundColor: i < currentStep ? '#C8922A' : '#D4C4B0' }} />
-          ))}
+      {/* Progress Steps bar */}
+      <View className="border-b py-4 px-6" style={{ backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant + '1A' }}>
+        <View className="flex-row justify-between items-center max-w-sm mx-auto w-full">
+          {/* Step 1: Stay */}
+          <View className="items-center gap-1">
+            <View 
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: currentStep >= 0 ? colors.pharaohGold : colors.surfaceContainerHighest }}
+            >
+              <Text className="text-white text-xs font-bold">1</Text>
+            </View>
+            <Text 
+              className="text-label-sm font-semibold"
+              style={{ color: currentStep >= 0 ? colors.pharaohGold : colors.onSurfaceVariant + '99' }}
+            >
+              Stay
+            </Text>
+          </View>
+
+          <View 
+            className="flex-1 h-[2px] mx-2"
+            style={{ backgroundColor: currentStep >= 1 ? colors.pharaohGold : colors.outlineVariant + '4D' }}
+          />
+
+          {/* Step 2: Details */}
+          <View className="items-center gap-1">
+            <View 
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: currentStep >= 1 ? colors.pharaohGold : colors.surfaceContainerHighest }}
+            >
+              <Text className="text-xs font-bold" style={{ color: currentStep >= 1 ? '#FFFFFF' : colors.onSurfaceVariant + '99' }}>2</Text>
+            </View>
+            <Text 
+              className="text-label-sm font-semibold"
+              style={{ color: currentStep >= 1 ? colors.pharaohGold : colors.onSurfaceVariant + '99' }}
+            >
+              Details
+            </Text>
+          </View>
+
+          <View 
+            className="flex-1 h-[2px] mx-2"
+            style={{ backgroundColor: currentStep >= 2 ? colors.pharaohGold : colors.outlineVariant + '4D' }}
+          />
+
+          {/* Step 3: Payment */}
+          <View className="items-center gap-1">
+            <View 
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: currentStep >= 2 ? colors.pharaohGold : colors.surfaceContainerHighest }}
+            >
+              <Text className="text-xs font-bold" style={{ color: currentStep >= 2 ? '#FFFFFF' : colors.onSurfaceVariant + '99' }}>3</Text>
+            </View>
+            <Text 
+              className="text-label-sm font-semibold"
+              style={{ color: currentStep >= 2 ? colors.pharaohGold : colors.onSurfaceVariant + '99' }}
+            >
+              Payment
+            </Text>
+          </View>
         </View>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={100}
-        >
-          <View className="px-4 py-4 pb-20">
-            {/* Step 1: Dates */}
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <View className="p-4 md:p-10 max-w-[900px] mx-auto w-full">
+            
+            {/* STEP 1: Dates & Steppers */}
             {currentStep === 0 && (
-              <View className="gap-4">
-                <Text className="text-headline-md font-headline text-on-surface mb-2">{t('booking.flow.selectDates')}</Text>
-                <Text className="text-body-md text-on-surface-variant">{t('booking.flow.selectDatesDesc')}</Text>
-                
-                <View className="flex-row gap-3 mt-4">
-                  <TouchableOpacity
-                    onPress={() => { /* Date picker */ }}
-                    className="flex-1 p-4 rounded-xl border-2 border-outline-variant bg-surface-container"
-                  >
-                    <Text className="text-label-sm text-on-surface-variant mb-1">{t('hotelDetail.checkIn')}</Text>
-                    <Text className="text-body-lg font-headline text-on-surface">{checkIn || 'Select date'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => { /* Date picker */ }}
-                    className="flex-1 p-4 rounded-xl border-2 border-outline-variant bg-surface-container"
-                  >
-                    <Text className="text-label-sm text-on-surface-variant mb-1">{t('hotelDetail.checkOut')}</Text>
-                    <Text className="text-body-lg font-headline text-on-surface">{checkOut || 'Select date'}</Text>
-                  </TouchableOpacity>
+              <View className="gap-6">
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Ionicons name="calendar-outline" size={24} color="#C8922A" />
+                  <Text className="font-headline text-headline-md" style={{ color: colors.onSurface }}>Choose your dates</Text>
                 </View>
-                
-                <View className="mt-4 p-4 rounded-xl bg-primary/10 flex-row items-center gap-3">
-                  <Ionicons name="information-circle-outline" size={20} color="#C8922A" />
-                  <Text className="text-body-md text-primary flex-1">
-                    Check-in after 3:00 PM | Check-out before 12:00 PM
-                  </Text>
+
+                <View className="flex-row gap-4">
+                  {/* Check In */}
+                  <View 
+                    className="flex-1 border rounded-xl p-4 shadow-sm"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <Text className="text-label-sm uppercase tracking-widest mb-1" style={{ color: colors.outline }}>Check-in</Text>
+                    <TextInput
+                      value={checkIn}
+                      onChangeText={setCheckIn}
+                      className="text-headline-md-mobile font-headline p-0"
+                      style={{ color: colors.onSurface }}
+                    />
+                  </View>
+                  
+                  {/* Check Out */}
+                  <View 
+                    className="flex-1 border rounded-xl p-4 shadow-sm"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <Text className="text-label-sm uppercase tracking-widest mb-1" style={{ color: colors.outline }}>Check-out</Text>
+                    <TextInput
+                      value={checkOut}
+                      onChangeText={setCheckOut}
+                      className="text-headline-md-mobile font-headline p-0"
+                      style={{ color: colors.onSurface }}
+                    />
+                  </View>
+                </View>
+
+                {/* Steppers */}
+                <View className="gap-4 mt-4">
+                  <View 
+                    className="flex-row justify-between items-center p-6 border rounded-xl shadow-sm"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <View>
+                      <Text className="font-headline text-label-md font-bold" style={{ color: colors.onSurface }}>Guests</Text>
+                      <Text className="text-label-sm mt-0.5" style={{ color: colors.outline }}>Adults & Children</Text>
+                    </View>
+                    <View className="flex-row items-center gap-4">
+                      <TouchableOpacity onPress={() => setGuests(Math.max(1, guests - 1))} className="w-10 h-10 rounded-full border border-pharaoh-gold items-center justify-center active:scale-95">
+                        <Ionicons name="remove" size={20} color="#C8922A" />
+                      </TouchableOpacity>
+                      <Text className="font-headline text-headline-md-mobile w-8 text-center" style={{ color: colors.onSurface }}>{guests}</Text>
+                      <TouchableOpacity onPress={() => setGuests(guests + 1)} className="w-10 h-10 rounded-full border border-pharaoh-gold items-center justify-center active:scale-95">
+                        <Ionicons name="add" size={20} color="#C8922A" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View 
+                    className="flex-row justify-between items-center p-6 border rounded-xl shadow-sm"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <View>
+                      <Text className="font-headline text-label-md font-bold" style={{ color: colors.onSurface }}>Rooms</Text>
+                      <Text className="text-label-sm mt-0.5" style={{ color: colors.outline }}>Suites available</Text>
+                    </View>
+                    <View className="flex-row items-center gap-4">
+                      <TouchableOpacity onPress={() => setRooms(Math.max(1, rooms - 1))} className="w-10 h-10 rounded-full border border-pharaoh-gold items-center justify-center active:scale-95">
+                        <Ionicons name="remove" size={20} color="#C8922A" />
+                      </TouchableOpacity>
+                      <Text className="font-headline text-headline-md-mobile w-8 text-center" style={{ color: colors.onSurface }}>{rooms}</Text>
+                      <TouchableOpacity onPress={() => setRooms(rooms + 1)} className="w-10 h-10 rounded-full border border-pharaoh-gold items-center justify-center active:scale-95">
+                        <Ionicons name="add" size={20} color="#C8922A" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Continue Button */}
+                <View className="mt-8 items-end">
+                  <TouchableOpacity
+                    onPress={handleNext}
+                    className="bg-pharaoh-gold px-8 py-4 rounded-full flex-row items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Text className="text-white font-bold text-label-md">Continue to Details</Text>
+                    <Ionicons name="arrow-forward" size={16} color="white" />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
 
-            {/* Step 2: Room Selection */}
+            {/* STEP 2: Special Requests & Fare Summary */}
             {currentStep === 1 && (
-              <View className="gap-4">
-                <Text className="text-headline-md font-headline text-on-surface mb-2">{t('booking.flow.selectRoom')}</Text>
-                <Text className="text-body-md text-on-surface-variant">{t('booking.flow.selectRoomDesc')}</Text>
-                
-                <View className="gap-3 mt-4">
-                  {h.rooms.map((room: any, i: number) => (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => setSelectedRoom(room)}
-                      className={`p-4 rounded-2xl border-2 flex-row items-center justify-between ${
-                        selectedRoom === room
-                          ? 'border-primary bg-primary/5'
-                          : 'border-outline-variant bg-surface'
-                      }`}
-                    >
-                      <View className="flex-1">
-                        <Text className="text-body-lg font-headline text-on-surface">{room.type}</Text>
-                        <View className="flex-row items-center gap-4 mt-2">
-                          <View className="flex-row items-center gap-1">
-                            <Ionicons name="people-outline" size={16} color="#827564" />
-                            <Text className="text-label-md text-on-surface-variant">{t('hotelDetail.sleepsHeader')} {room.capacity}</Text>
-                          </View>
-                          <View className="flex-row items-center gap-1">
-                            <Ionicons name="bed-outline" size={16} color="#827564" />
-                            <Text className="text-label-md text-on-surface-variant">{room.features?.slice(0, 2).join(', ')}</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <View className="text-right">
-                        <Text className="text-body-lg font-headline text-primary">{formatCurrency(room.pricePerNight, h.currency)}</Text>
-                        <Text className="text-label-sm text-on-surface-variant">/ night</Text>
-                        {selectedRoom && (
-                          <Badge variant="gold" className="mt-2 inline-block">{t('hotelDetail.aiBestPrice')}</Badge>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Step 3: Guests */}
-            {currentStep === 2 && (
               <View className="gap-6">
-                <Text className="text-headline-md font-headline text-on-surface mb-2">{t('booking.flow.guests')}</Text>
-                <Text className="text-body-md text-on-surface-variant">{t('booking.flow.guestsDesc')}</Text>
-                
-                <View className="gap-4">
-                  <View>
-                    <Text className="text-label-md text-on-surface-variant mb-2">{t('hotelDetail.guests')}</Text>
-                    <View className="flex-row items-center justify-between p-4 rounded-xl border-2 border-outline-variant bg-surface-container">
-                      <Text className="text-body-lg font-headline text-on-surface">{guests} {t('hotelDetail.guests')}</Text>
-                      <View className="flex-row items-center gap-4">
-                        <TouchableOpacity onPress={() => setGuests(Math.max(1, guests - 1))} className="p-2 rounded-full bg-primary/10">
-                          <Ionicons name="remove" size={20} color="#C8922A" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setGuests(guests + 1)} className="p-2 rounded-full bg-primary/10">
-                          <Ionicons name="add" size={20} color="#C8922A" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                  <View className="mt-4">
-                    <Text className="text-label-md text-on-surface-variant mb-2">{t('hotelDetail.rooms')}</Text>
-                    <View className="flex-row items-center justify-between p-4 rounded-xl border-2 border-outline-variant bg-surface-container">
-                      <Text className="text-body-lg font-headline text-on-surface">{rooms} {t('hotelDetail.rooms')}</Text>
-                      <View className="flex-row items-center gap-4">
-                        <TouchableOpacity onPress={() => setRooms(Math.max(1, rooms - 1))} className="p-2 rounded-full bg-primary/10">
-                          <Ionicons name="remove" size={20} color="#C8922A" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setRooms(rooms + 1)} className="p-2 rounded-full bg-primary/10">
-                          <Ionicons name="add" size={20} color="#C8922A" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Ionicons name="create-outline" size={24} color="#C8922A" />
+                  <Text className="font-headline text-headline-md" style={{ color: colors.onSurface }}>Personalize your stay</Text>
                 </View>
 
-                <View>
-                  <Text className="text-label-md text-on-surface-variant mb-2">{t('hotelDetail.specialRequests')}</Text>
-                  <TextInput
-                    value={specialRequests}
-                    onChangeText={setSpecialRequests}
-                    placeholder={t('hotelDetail.specialRequestsPlaceholder')}
-                    multiline
-                    numberOfLines={3}
-                    className="p-4 rounded-xl border-2 border-outline-variant bg-surface-container text-on-surface placeholder-text-on-surface-variant"
-                  />
-                </View>
-              </View>
-            )}
+                <View className="flex-col gap-6">
+                  {/* Requests Box */}
+                  <View 
+                    className="p-5 border rounded-xl shadow-sm"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <Text className="font-headline text-label-md mb-3" style={{ color: colors.onSurface }}>Special Requests (Optional)</Text>
+                    <TextInput
+                      value={specialRequests}
+                      onChangeText={setSpecialRequests}
+                      placeholder="E.g. High floor, dietary requirements, airport pickup..."
+                      placeholderTextColor={colors.onSurfaceVariant + '80'}
+                      multiline
+                      numberOfLines={4}
+                      className="p-4 rounded-lg font-body text-body-md"
+                      textAlignVertical="top"
+                      style={{ minHeight: 80, backgroundColor: colors.surfaceContainerLow, color: colors.onSurface }}
+                    />
+                  </View>
 
-            {/* Step 4: Payment */}
-            {currentStep === 3 && (
-              <View className="gap-6">
-                <Text className="text-headline-md font-headline text-on-surface mb-2">{t('booking.flow.payment')}</Text>
-                <Text className="text-body-md text-on-surface-variant">{t('booking.flow.paymentDesc')}</Text>
-
-                {/* Price Summary */}
-                <Card className="mb-4">
-                  <CardContent>
-                    <Text className="text-headline-md font-headline text-on-surface mb-4">{t('hotelDetail.priceNights', { price: formatCurrency(selectedRoom?.pricePerNight || 0, h.currency), nights: 3 })}</Text>
-                    <View className="space-y-2 mb-4">
-                      <View className="flex-row justify-between">
-                        <Text className="text-body-md text-on-surface-variant">{selectedRoom?.type} × {rooms} rooms</Text>
-                        <Text className="text-body-md font-medium text-on-surface">{formatCurrency((selectedRoom?.pricePerNight || 0) * rooms * 3, h.currency)}</Text>
-                      </View>
-                      <View className="flex-row justify-between">
-                        <Text className="text-body-md text-on-surface-variant">{t('hotelDetail.serviceFee')}</Text>
-                        <Text className="text-body-md font-medium text-on-surface">{formatCurrency((selectedRoom?.pricePerNight || 0) * rooms * 3 * 0.12, h.currency)}</Text>
-                      </View>
-                      <View className="flex-row justify-between">
-                        <Text className="text-body-md text-on-surface-variant">{t('hotelDetail.taxesAndFees')}</Text>
-                        <Text className="text-body-md font-medium text-on-surface">{formatCurrency((selectedRoom?.pricePerNight || 0) * rooms * 3 * 0.14, h.currency)}</Text>
-                      </View>
-                    </View>
-                    <View className="border-t border-outline-variant pt-4 flex-row justify-between">
-                      <Text className="text-headline-md font-headline text-on-surface">{t('hotelDetail.total')}</Text>
-                      <Text className="text-headline-md font-headline text-primary">
-                        {formatCurrency((selectedRoom?.pricePerNight || 0) * rooms * 3 * 1.26, h.currency)}
+                  {/* AI Concierge applied card */}
+                  <View 
+                    className="p-5 border rounded-xl flex-row items-start gap-4"
+                    style={{ backgroundColor: colors.pharaohGold + '14', borderColor: colors.pharaohGold + '4D' }}
+                  >
+                    <Ionicons name="sparkles" size={20} color="#C8922A" className="mt-1" />
+                    <View className="flex-1">
+                      <Text className="font-bold text-pharaoh-gold text-label-sm uppercase tracking-wider">AI Concierge Applied</Text>
+                      <Text className="text-xs font-body mt-1 leading-relaxed" style={{ color: colors.onSurfaceVariant }}>
+                        Based on your history, we've suggested a Nile-view room and early check-in. A 10% heritage discount has been applied.
                       </Text>
                     </View>
-                  </CardContent>
-                </Card>
+                  </View>
 
-                {/* Payment Options */}
-                <View className="gap-3">
-                  <Text className="text-label-md text-on-surface-variant mb-2">{t('booking.flow.paymentMethod')}</Text>
-                  <TouchableOpacity className="p-4 rounded-xl border-2 border-outline-variant bg-surface flex-row items-center gap-4">
-                    <View className="w-12 h-12 rounded-xl bg-primary/10 flex-items-center justify-center">
-                      <Ionicons name="card-outline" size={24} color="#C8922A" />
+                  {/* Fare Summary Card */}
+                  <View 
+                    className="border relative p-1 rounded-2xl shadow-resting mt-2"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                  >
+                    <View className="border border-pharaoh-gold/25 p-5 rounded-xl" style={{ backgroundColor: colors.background }}>
+                      <View className="flex-row items-center gap-2 border-b pb-3 mb-4" style={{ borderBottomColor: colors.outlineVariant + '33' }}>
+                        <Ionicons name="receipt-outline" size={18} color="#C8922A" />
+                        <Text className="font-headline text-headline-md-mobile text-pharaoh-gold">Fare Summary</Text>
+                      </View>
+                      
+                      <View className="flex-col gap-3.5">
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>{totalNights} nights × {formatCurrency(roomPrice, hotel?.currency)}</Text>
+                          <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>{formatCurrency(subtotal, hotel?.currency)}</Text>
+                        </View>
+                        
+                        <View 
+                          className="flex-row justify-between items-center border px-3 py-2 rounded-lg"
+                          style={{ backgroundColor: colors.success + '1A', borderColor: colors.success + '33' }}
+                        >
+                          <View className="flex-row items-center gap-1.5">
+                            <Ionicons name="sparkles" size={14} color="#2D7A4F" />
+                            <Text className="text-body-sm font-semibold" style={{ color: colors.success }}>AI Heritage Discount (10%)</Text>
+                          </View>
+                          <Text className="text-body-md font-bold" style={{ color: colors.success }}>-{formatCurrency(aiDiscount, hotel?.currency)}</Text>
+                        </View>
+                        
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>Taxes & Fees</Text>
+                          <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>{formatCurrency(taxesAndFees, hotel?.currency)}</Text>
+                        </View>
+                        
+                        <View className="h-[1px] border-t border-dashed my-2 pt-2" style={{ borderTopColor: colors.outlineVariant + '66' }} />
+                        
+                        <View className="flex-row justify-between items-center">
+                          <Text className="font-headline text-label-md uppercase tracking-widest" style={{ color: colors.outline }}>Total Amount</Text>
+                          <Text className="font-headline text-2xl text-pharaoh-gold font-bold">{formatCurrency(totalAmount, hotel?.currency)}</Text>
+                        </View>
+                      </View>
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-body-md font-medium text-on-surface">Credit/Debit Card</Text>
-                      <Text className="text-label-sm text-on-surface-variant">Visa, Mastercard, Amex</Text>
-                    </View>
-                    <Ionicons name="checkmark-circle" size={24} color="#C8922A" />
-                  </TouchableOpacity>
-                  <TouchableOpacity className="p-4 rounded-xl border-2 border-outline-variant bg-surface flex-row items-center gap-4">
-                    <View className="w-12 h-12 rounded-xl bg-secondary/10 flex-items-center justify-center">
-                      <Ionicons name="logo-applepay" size={24} color="#366286" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-body-md font-medium text-on-surface">Apple Pay / Google Pay</Text>
-                      <Text className="text-label-sm text-on-surface-variant">Fast & secure checkout</Text>
-                    </View>
-                  </TouchableOpacity>
+                  </View>
                 </View>
 
-                <Text className="text-label-sm text-on-surface-variant text-center mt-4">
-                  {t('hotelDetail.disclaimer')}
-                </Text>
+                {/* Back and Proceed Buttons */}
+                <View className="flex-row justify-between mt-8 border-t pt-4" style={{ borderTopColor: colors.outlineVariant + '33' }}>
+                  <TouchableOpacity
+                    onPress={handlePrevious}
+                    className="px-6 py-4 flex-row items-center gap-2 active:scale-95"
+                  >
+                    <Ionicons name="arrow-back" size={16} color={colors.outline} />
+                    <Text className="font-bold text-label-md" style={{ color: colors.outline }}>Back</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleNext}
+                    className="bg-pharaoh-gold px-8 py-4 rounded-full flex-row items-center gap-2 shadow-lg active:scale-95"
+                  >
+                    <Text className="text-white font-bold text-label-md">Proceed to Payment</Text>
+                    <Ionicons name="lock-closed" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
-            {/* Navigation Buttons */}
-            <View className="flex-row gap-3 mt-8 pt-4 border-t border-outline-variant">
-              {currentStep > 0 && (
-                <Button variant="outline" onPress={handlePrevious} flex={1}>
-                  <Ionicons name="chevron-back" size={18} style={{ marginRight: 8 }} />
-                  <Text>{t('common.previous')}</Text>
-                </Button>
-              )}
-              <Button
-                onPress={currentStep < BOOKING_STEPS.length - 1 ? handleNext : handleBooking}
-                disabled={isProcessing}
-                fullWidth
-                flex={currentStep > 0 ? 1 : 1}
-                size="lg"
-              >
-                {isProcessing ? (
-                  <ActivityIndicator color="#FFFFFF" size="large" />
-                ) : currentStep < BOOKING_STEPS.length - 1 ? (
-                  <Text>{t('common.next')}</Text>
-                ) : (
-                  <Text>{t('hotelDetail.bookNow')}</Text>
-                )}
-              </Button>
-            </View>
+            {/* STEP 3: Confirm Payment */}
+            {currentStep === 2 && (
+              <View className="gap-6">
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Ionicons name="card-outline" size={24} color="#C8922A" />
+                  <Text className="font-headline text-headline-md" style={{ color: colors.onSurface }}>Confirm Payment</Text>
+                </View>
+
+                 <View 
+                   className="p-6 rounded-xl border shadow-sm space-y-6"
+                   style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                 >
+                   {/* Mock Visa Card */}
+                   <View 
+                     className="flex-row items-center justify-between p-4 rounded-xl border"
+                     style={{ backgroundColor: colors.surface, borderColor: colors.pharaohGold + '40' }}
+                   >
+                     <View className="flex-row items-center gap-4">
+                       <View className="w-12 h-8 rounded flex items-center justify-center" style={{ backgroundColor: colors.onSurfaceVariant }}>
+                         <Text className="text-white text-[10px] font-bold">VISA</Text>
+                       </View>
+                       <View>
+                         <Text className="font-bold text-body-md" style={{ color: colors.onSurface }}>•••• 4412</Text>
+                         <Text className="text-xs font-label mt-0.5" style={{ color: colors.outline }}>Expires 12/28</Text>
+                       </View>
+                     </View>
+                     <TouchableOpacity>
+                       <Text className="text-pharaoh-gold font-bold text-label-sm">Edit</Text>
+                     </TouchableOpacity>
+                   </View>
+
+                   {/* Agree Checkbox */}
+                   <TouchableOpacity 
+                     onPress={() => setIsAgreed(!isAgreed)}
+                     className="flex-row items-center gap-3 py-2 active:opacity-80"
+                   >
+                     <View 
+                       className="w-5 h-5 rounded border items-center justify-center"
+                       style={{ backgroundColor: isAgreed ? colors.pharaohGold : 'transparent', borderColor: isAgreed ? colors.pharaohGold : colors.outline }}
+                     >
+                       {isAgreed && <Ionicons name="checkmark" size={14} color="white" />}
+                     </View>
+                     <Text className="text-body-md flex-1 leading-tight" style={{ color: colors.onSurfaceVariant }}>
+                       I agree to the <Text className="text-pharaoh-gold underline">Heritage Terms of Service</Text> and Cancellation Policy.
+                     </Text>
+                   </TouchableOpacity>
+                 </View>
+
+                {/* Complete Booking CTA */}
+                <View className="mt-8 flex-col items-center gap-4">
+                  <TouchableOpacity
+                    onPress={handleBooking}
+                    disabled={isProcessing}
+                    className="w-full bg-pharaoh-gold py-5 rounded-full flex-row items-center justify-center gap-2 shadow-xl active:scale-95"
+                  >
+                    {isProcessing ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Text className="text-white font-bold text-headline-md-mobile">Complete Booking</Text>
+                        <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <View className="flex-row items-center gap-1.5 justify-center">
+                    <Ionicons name="shield-checkmark" size={14} color={colors.outline} />
+                    <Text className="text-xs font-label" style={{ color: colors.outline }}>Bank-grade encrypted transaction</Text>
+                  </View>
+                </View>
+
+                {/* Back button */}
+                <TouchableOpacity
+                  onPress={handlePrevious}
+                  className="px-6 py-4 flex-row items-center gap-2 self-start active:scale-95"
+                >
+                  <Ionicons name="arrow-back" size={16} color={colors.outline} />
+                  <Text className="font-bold text-label-md" style={{ color: colors.outline }}>Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Success Screen Overlay */}
+      {showSuccessOverlay && (
+        <View className="absolute inset-0 z-[100] flex items-center justify-center px-6" style={{ backgroundColor: colors.background }}>
+          <View className="max-w-md w-full items-center text-center space-y-6">
+            
+            {/* Animated Ring */}
+            <View className="relative w-32 h-32 items-center justify-center">
+              <View className="absolute inset-0 bg-pharaoh-gold/20 rounded-full scale-125" />
+              <View className="w-24 h-24 bg-pharaoh-gold rounded-full flex items-center justify-center shadow-lg">
+                <Ionicons name="checkmark" size={48} color="white" />
+              </View>
+            </View>
+
+            <View className="items-center gap-2 mt-4">
+              <Text className="font-headline text-display-lg text-center" style={{ color: colors.onSurface }}>Experience Confirmed</Text>
+              <Text className="font-body text-body-md text-center leading-relaxed mt-2" style={{ color: colors.onSurfaceVariant }}>
+                Your journey to the heart of the Nile begins soon. A detailed itinerary has been sent to your email.
+              </Text>
+            </View>
+
+            {/* Booking ID box */}
+            <View 
+              className="border p-4 rounded-xl items-center inline-block shadow-sm"
+              style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+            >
+              <Text className="text-label-sm uppercase tracking-wider mb-1" style={{ color: colors.outline }}>Booking ID</Text>
+              <Text className="font-headline text-headline-md-mobile text-pharaoh-gold uppercase">
+                {createdBookingId.substring(0, 8).toUpperCase() || 'RHL-7729'}
+              </Text>
+            </View>
+
+            {/* Return / Discover button */}
+            <TouchableOpacity
+              onPress={() => router.push(`/booking/${createdBookingId}`)}
+              className="mt-8 border-2 border-pharaoh-gold px-10 py-4 rounded-full active:scale-95"
+            >
+              <Text className="text-pharaoh-gold font-bold text-label-md">View Reservation Details</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      )}
+
+    </View>
   );
 }

@@ -50,20 +50,24 @@ export const HeroHeader = ({
         {ctaPrimary && (
           <TouchableOpacity
             onPress={onPrimaryPress || (() => router.push('/trip/generate'))}
-            className="bg-primary text-on-primary px-8 py-4 rounded-full font-medium text-body-md shadow-hover"
+            className="bg-primary px-8 py-4 rounded-full shadow-hover items-center justify-center"
             activeOpacity={0.8}
           >
-            {ctaPrimary}
+            <Text className="text-on-primary font-medium text-body-md">
+              {ctaPrimary}
+            </Text>
           </TouchableOpacity>
         )}
 
         {ctaSecondary && (
           <TouchableOpacity
             onPress={onSecondaryPress}
-            className="mt-3 border-2 border-white/30 text-white px-8 py-3 rounded-full font-medium text-body-md"
+            className="mt-3 border-2 border-white/30 px-8 py-3 rounded-full items-center justify-center"
             activeOpacity={0.8}
           >
-            {ctaSecondary}
+            <Text className="text-white font-medium text-body-md">
+              {ctaSecondary}
+            </Text>
           </TouchableOpacity>
         )}
 

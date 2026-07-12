@@ -1,6 +1,7 @@
 // app/_layout.tsx
+import '../global.css';
 import { useEffect } from 'react';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { I18nextProvider } from 'react-i18next';
@@ -18,21 +19,27 @@ export default function RootLayout() {
   const { setLanguage } = useUIStore();
 
   useEffect(() => {
-    checkAuth();
+    const timer = setTimeout(() => {
+      checkAuth();
+      // Sync language with i18n
+      const lang = i18n.language;
+      setLanguage(lang as 'en' | 'ar');
+    }, 0);
     
-    // Sync language with i18n
-    const lang = i18n.language;
-    setLanguage(lang as 'en' | 'ar');
-    
-    i18n.on('languageChanged', (lng) => {
+    const handleLangChange = (lng: string) => {
       setLanguage(lng as 'en' | 'ar');
-    });
+    };
+
+    i18n.on('languageChanged', handleLangChange);
+    
+    return () => {
+      clearTimeout(timer);
+      i18n.off('languageChanged', handleLangChange);
+    };
   }, []);
 
   const postHogContent = (
-    <>
-      <Slot />
-    </>
+    <Stack screenOptions={{ headerShown: false }} />
   );
 
   return (

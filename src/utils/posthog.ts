@@ -5,6 +5,7 @@ const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 if (POSTHOG_KEY) {
+  // @ts-ignore - posthog-react-native API
   posthog.init(POSTHOG_KEY, {
     host: POSTHOG_HOST,
     captureApplicationLifecycleEvents: true,

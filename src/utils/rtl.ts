@@ -1,14 +1,12 @@
 // src/utils/rtl.ts
 import { StyleProp, ViewStyle, TextStyle } from 'react-native';
 
-export function rtl(styles: StyleProp<ViewStyle | TextStyle>, isRTL: boolean): StyleProp<ViewStyle | TextStyle> {
-  if (!isRTL) return styles;
+type StyleValue = ViewStyle | TextStyle | false | null | undefined;
+
+function transformStyle(style: StyleValue, isRTL: boolean): any {
+  if (!style) return style;
   
-  if (Array.isArray(styles)) {
-    return styles.map(s => rtl(s, isRTL));
-  }
-  
-  const newStyles: any = { ...styles };
+  const newStyles: any = { ...style };
   
   // Swap horizontal margins/paddings
   const horizontalProps = [
@@ -34,6 +32,22 @@ export function rtl(styles: StyleProp<ViewStyle | TextStyle>, isRTL: boolean): S
   else if (newStyles.textAlign === 'right') newStyles.textAlign = 'left';
   
   return newStyles;
+}
+
+function processStyles(styles: any, isRTL: boolean): any {
+  if (!isRTL) return styles;
+  
+  if (Array.isArray(styles)) {
+    return styles.map(s => processStyles(s, isRTL));
+  }
+  
+  if (!styles) return styles;
+  
+  return transformStyle(styles, isRTL);
+}
+
+export function rtl(styles: StyleProp<ViewStyle | TextStyle>, isRTL: boolean): any {
+  return processStyles(styles, isRTL);
 }
 
 export function getRTLStyles(isRTL: boolean) {

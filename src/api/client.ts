@@ -1,5 +1,5 @@
 // src/api/client.ts
-import ky, { KyInstance, Options, BeforeRequestHook, AfterResponseHook } from 'ky';
+import ky, { KyInstance, Options, BeforeRequestHook, AfterResponseHook, ResponsePromise } from 'ky';
 import * as SecureStore from 'expo-secure-store';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://rahal-back-end.vercel.app/api/v1';
@@ -44,7 +44,7 @@ export const setAuthStoreRef = (store: { getState: () => any }) => {
   useAuthStoreRef = store;
 };
 
-const beforeRequestHook: BeforeRequestHook = async (request) => {
+const beforeRequestHook: BeforeRequestHook = async ({ request }) => {
   const token = await getAuthToken();
   if (token) {
     request.headers.set('Authorization', `Bearer ${token}`);
@@ -53,7 +53,7 @@ const beforeRequestHook: BeforeRequestHook = async (request) => {
   request.headers.set('Content-Type', 'application/json');
 };
 
-const afterResponseHook: AfterResponseHook = async (_request, _options, response) => {
+const afterResponseHook: AfterResponseHook = async ({ response }) => {
   if (response.status === 401 && useAuthStoreRef) {
     // Token expired or invalid
     useAuthStoreRef.getState().logout();
@@ -66,7 +66,7 @@ class APIClient {
 
   constructor() {
     this.client = ky.create({
-      prefixUrl: API_URL,
+      prefix: API_URL,
       timeout: 30000,
       hooks: {
         beforeRequest: [beforeRequestHook],
@@ -75,24 +75,24 @@ class APIClient {
     });
   }
 
-  async get<T>(url: string, options?: Options): Promise<T> {
-    return this.client.get(url, options).json<T>();
+  get(url: string, options?: Options): ResponsePromise {
+    return this.client.get(url, options);
   }
 
-  async post<T>(url: string, options?: Options): Promise<T> {
-    return this.client.post(url, options).json<T>();
+  post(url: string, options?: Options): ResponsePromise {
+    return this.client.post(url, options);
   }
 
-  async patch<T>(url: string, options?: Options): Promise<T> {
-    return this.client.patch(url, options).json<T>();
+  patch(url: string, options?: Options): ResponsePromise {
+    return this.client.patch(url, options);
   }
 
-  async put<T>(url: string, options?: Options): Promise<T> {
-    return this.client.put(url, options).json<T>();
+  put(url: string, options?: Options): ResponsePromise {
+    return this.client.put(url, options);
   }
 
-  async delete<T>(url: string, options?: Options): Promise<T> {
-    return this.client.delete(url, options).json<T>();
+  delete(url: string, options?: Options): ResponsePromise {
+    return this.client.delete(url, options);
   }
 
   getRawClient(): KyInstance {

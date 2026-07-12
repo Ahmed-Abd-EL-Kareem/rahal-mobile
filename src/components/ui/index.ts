@@ -1,6 +1,6 @@
 // src/components/ui/index.ts
-export { Button } from './Button';
+export { Button, PrimaryButton, SecondaryButton, OutlineButton, GhostButton, AIButton, SuccessButton } from './Button';
 export { Input } from './Input';
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
-export { Badge, SparkleBadge } from './Badge';
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, PapyrusCard, ElevatedCard, OutlinedCard } from './Card';
+export { Badge, SparkleBadge, GoldBadge, BlueBadge, GreenBadge, RedBadge, OutlineBadge, StatusBadge } from './Badge';
 export { SearchBar } from './SearchBar';

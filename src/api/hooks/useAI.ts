@@ -1,5 +1,5 @@
 // src/api/hooks/useAI.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import { ChatMessage } from '@/store/aiSessionStore';
@@ -29,14 +29,18 @@ export function useAIHotelSearch() {
   });
 }
 
-export function useAIHotelRecommendations(tripId?: string) {
+export function useAIHotelRecommendations(tripId?: string, limit?: number) {
   return useQuery({
     queryKey: queryKeys.aiHotelRecommendations(tripId),
     queryFn: () => {
-      const url = tripId 
-        ? `ai/hotels/recommendations?tripId=${tripId}`
-        : 'ai/hotels/recommendations';
-      return api.get(url).json<{ status: 'success'; data: { reply: string; tokensUsed: number }; message: string }>();
+      let url = 'ai/hotels/recommendations';
+      const params: string[] = [];
+      if (tripId) params.push(`tripId=${tripId}`);
+      if (limit) params.push(`limit=${limit}`);
+      if (params.length > 0) {
+        url += `?${params.join('&')}`;
+      }
+      return api.get(url).json<{ status: 'success'; message: string; data: { hotels: any[]; tokensUsed: number } }>();
     },
     enabled: !!tripId,
   });

@@ -60,6 +60,7 @@ export interface Room {
   type: 'single' | 'double' | 'suite' | 'family';
   pricePerNight: number;
   capacity: number;
+  features?: string[];
 }
 
 export interface Hotel {
@@ -76,6 +77,7 @@ export interface Hotel {
   images: string[];
   coverImage: string;
   isActive: boolean;
+  description?: { en: string; ar: string };
 }
 
 export interface HotelFilters {

@@ -4,17 +4,17 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isLoading, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/(auth)/login');
+        router.replace('/(onboarding)');
       }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isLoading, isAuthenticated]);
 
   return null;
 }

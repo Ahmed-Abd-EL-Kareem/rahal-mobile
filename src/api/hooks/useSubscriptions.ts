@@ -40,7 +40,7 @@ export function useCancelSubscription() {
   });
 }
 
-export function usePaymentStatus(subscriptionId: string) {
+export function useSubscriptionPaymentStatus(subscriptionId: string) {
   return useQuery({
     queryKey: ['subscription', 'payment', 'status', subscriptionId],
     queryFn: () => api.get(`subscriptions/pay/status/${subscriptionId}`).json<{ status: 'success'; data: any }>(),

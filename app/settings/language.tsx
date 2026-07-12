@@ -1,6 +1,7 @@
 // app/settings/language.tsx
 import React from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +31,7 @@ export default function LanguageScreen() {
           {/* Header */}
           <View className="mb-6">
             <TouchableOpacity onPress={() => router.back()} className="mb-4">
-              <Ionicons name="chevron-back" size={28} color="#1C1C19" />
+              <Ionicons name="chevron-back" size={28} color={colors.onSurface} />
             </TouchableOpacity>
             <Text className="text-display-lg-mobile font-headline text-on-surface">
               {t('account.preferredLanguage')}
@@ -68,13 +69,13 @@ export default function LanguageScreen() {
               <TouchableOpacity
                 key={lang.code}
                 onPress={() => handleLanguageChange(lang.code as 'en' | 'ar')}
-                className={`p-4 rounded-2xl border-2 flex-row items-center gap-4 transition-colors ${
-                  lang.code === currentLang
-                    ? 'border-primary bg-primary/5'
-                    : 'border-outline-variant bg-surface'
-                }`}
+                className="p-4 rounded-2xl border-2 flex-row items-center gap-4 transition-colors"
+                style={{
+                  backgroundColor: lang.code === currentLang ? colors.primary + '14' : colors.surface,
+                  borderColor: lang.code === currentLang ? colors.primary : colors.outlineVariant + '33',
+                }}
               >
-                <View className="w-12 h-12 rounded-xl flex-items-center justify-center" style={{ backgroundColor: lang.code === currentLang ? '#C8922A33' : '#F0EDE9' }}>
+                <View className="w-12 h-12 rounded-xl flex-items-center justify-center" style={{ backgroundColor: lang.code === currentLang ? '#C8922A33' : (isDark ? '#2D2A26' : '#F0EDE9') }}>
                   <Text style={{ fontSize: 28 }}>{lang.flag}</Text>
                 </View>
                 <View className="flex-1">

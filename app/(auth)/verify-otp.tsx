@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { useTheme } from '@/hooks/useTheme';
 
 const verifyOtpSchema = z.object({
   otp: z.string().length(6, 'OTP must be 6 digits').regex(/^\d+$/, 'OTP must be numbers only'),
@@ -21,6 +22,7 @@ export default function VerifyOtpScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { showToast } = useUIStore();
+  const { colors, isDark } = useTheme();
   const params = useLocalSearchParams<{ email?: string }>();
   const [resendTimer, setResendTimer] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +59,7 @@ export default function VerifyOtpScreen() {
       const { api } = await import('@/api/client');
       await api.post('auth/verify-otp', { json: { email, otp: data.otp } }).json();
       showToast({ type: 'success', message: t('auth.verifyOtpSuccess') });
-      router.push(`/ (auth)/reset-password?email=${encodeURIComponent(email)}`);
+      router.push(`/(auth)/reset-password?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       const message = error.response?.data?.message || t('auth.errors.invalidOtp');
       showToast({ type: 'error', message });
@@ -81,7 +83,7 @@ export default function VerifyOtpScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       keyboardVerticalOffset={100}
     >
       <ScrollView
@@ -99,12 +101,12 @@ export default function VerifyOtpScreen() {
           <Text style={{ 
             fontFamily: 'PlayfairDisplay_700Bold', 
             fontSize: 24, 
-            color: '#1C1C19',
+            color: colors.onSurface,
             marginBottom: 8,
           }}>
             {t('auth.verifyOtpTitle')}
           </Text>
-          <Text style={{ fontSize: 16, color: '#504536', textAlign: 'center', paddingHorizontal: 20 }}>
+          <Text style={{ fontSize: 16, color: colors.onSurfaceVariant, textAlign: 'center', paddingHorizontal: 20 }}>
             {t('auth.verifyOtpSubtitle', { email })}
           </Text>
         </View>
@@ -122,11 +124,10 @@ export default function VerifyOtpScreen() {
                 label={t('auth.verifyOtpLabel')}
                 placeholder="000000"
                 error={error?.message}
-                keyboardType="number-pad"
+                keyboardType="numeric"
                 maxLength={6}
-                autoComplete="one-time-code"
-                textAlign="center"
-                style={{ fontSize: 24, letterSpacing: 24 }}
+                autoCompleteType="one-time-code"
+                style={{ fontSize: 24, letterSpacing: 24, textAlign: 'center' }}
               />
             )}
           />
@@ -145,7 +146,7 @@ export default function VerifyOtpScreen() {
           </Button>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24 }}>
-            <Text style={{ color: '#504536', fontSize: 14 }}>
+            <Text style={{ color: colors.onSurfaceVariant, fontSize: 14 }}>
               {resendTimer > 0 
                 ? t('auth.resendActive', { seconds: resendTimer })
                 : t('auth.resendBtn')
@@ -161,7 +162,7 @@ export default function VerifyOtpScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32 }}>
-            <TouchableOpacity onPress={() => router.push(`/ (auth)/forgot-password`)}>
+            <TouchableOpacity onPress={() => router.push(`/(auth)/forgot-password`)}>
               <Text style={{ color: '#C8922A', fontSize: 14, fontFamily: 'Inter_600SemiBold' }}>
                 {t('auth.backToLoginLink')}
               </Text>

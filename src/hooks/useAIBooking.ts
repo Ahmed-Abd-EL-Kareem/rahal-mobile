@@ -94,7 +94,7 @@ export function useAIHotelRecommendations(tripId?: string) {
   return { getRecommendations: getRecommendations.mutateAsync, isLoading: getRecommendations.isPending };
 }
 
-export function useAIChat() {
+export function useAIChatMutation() {
   const { showToast } = useUIStore();
 
   const sendMessage = useMutation({

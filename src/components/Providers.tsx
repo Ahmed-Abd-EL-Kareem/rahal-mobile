@@ -17,6 +17,8 @@ export function Providers({ children }: { children: ReactNode }) {
   const checkAuth = useAuthStore((s) => s.checkAuth);
   const setLanguage = useUIStore((s) => s.setLanguage);
   
+  const posthogClient = useMemo(() => posthog, []);
+  
   useEffect(() => {
     checkAuth();
     // Set initial language from i18n
@@ -26,7 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
-        <PostHogProvider client={posthog}>
+        <PostHogProvider client={posthogClient as any}>
           {children}
           <PostHogScreenTracker />
         </PostHogProvider>

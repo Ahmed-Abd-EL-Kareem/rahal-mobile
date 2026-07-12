@@ -1,11 +1,12 @@
 // app/settings/account.tsx
 import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
-import { Card, CardContent, Button, Badge } from '@/components/ui';
+import { Card, CardContent, Button, Badge, Input } from '@/components/ui';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
@@ -99,9 +100,8 @@ export default function AccountSettingsScreen() {
                 {isEditing ? (
                   <Input
                     value={formData.name}
-                    onChangeText={(v) => setFormData(prev => ({ ...prev, name: v }))}
+                    onChangeText={(v: string) => setFormData(prev => ({ ...prev, name: v }))}
                     className="w-auto"
-                    autoFocus
                   />
                 ) : (
                   user?.name || t('common.appName')
@@ -110,7 +110,7 @@ export default function AccountSettingsScreen() {
               <Text className="text-body-md text-on-surface-variant mt-1">{user?.email}</Text>
               <View className="flex-row items-center gap-2 mt-2">
                 <View className="w-8 h-8 rounded-full bg-primary/10 flex-items-center justify-center">
-                  <MaterialIcons name={isDark ? 'dark_mode' : 'light_mode'} size={18} color="#C8922A" />
+                  <MaterialIcons name={isDark ? 'dark-mode' : 'light-mode'} size={18} color="#C8922A" />
                 </View>
                 <Text className="text-label-md text-on-surface-variant">
                   {isDark ? 'Dark Mode' : 'Light Mode'}
@@ -130,10 +130,10 @@ export default function AccountSettingsScreen() {
             </TouchableOpacity>
           ) : (
             <View className="flex-row gap-3">
-              <Button variant="primary" onPress={handleSave} fullWidth flex={1}>
+              <Button variant="primary" onPress={handleSave} fullWidth style={{ flex: 1 }}>
                 {t('account.saveChanges')}
               </Button>
-              <Button variant="outline" onPress={handleCancel} fullWidth flex={1}>
+              <Button variant="outline" onPress={handleCancel} fullWidth style={{ flex: 1 }}>
                 {t('account.cancel')}
               </Button>
             </View>
@@ -149,7 +149,7 @@ export default function AccountSettingsScreen() {
                 <Input
                   label={t('account.fullName')}
                   value={formData.name}
-                  onChangeText={(v) => setFormData(prev => ({ ...prev, name: v }))}
+                  onChangeText={(v: string) => setFormData(prev => ({ ...prev, name: v }))}
                   placeholder={t('auth.namePlaceholder')}
                 />
               </CardContent>
@@ -312,7 +312,7 @@ export default function AccountSettingsScreen() {
 
           {/* Logout */}
           <View className="pt-4">
-            <Button variant="ghost" fullWidth destructive onPress={handleLogout} disabled={profileLoading}>
+            <Button variant="ghost" fullWidth onPress={handleLogout} disabled={profileLoading}>
               <Ionicons name="log-out-outline" size={24} style={{ marginRight: 8 }} />
               <Text>{t('common.nav.logout')}</Text>
             </Button>

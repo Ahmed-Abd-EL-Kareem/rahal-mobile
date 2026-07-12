@@ -1,6 +1,7 @@
 // app/settings/notifications.tsx
 import React from 'react';
-import { ScrollView, View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -58,24 +59,24 @@ export default function NotificationsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#1C1C19" />
+            <Ionicons name="chevron-back" size={28} color={colors.onSurface} />
           </TouchableOpacity>
-          <Text style={styles.title}>{t('common.nav.notifications')}</Text>
+          <Text style={[styles.title, { color: colors.onSurface }]}>{t('common.nav.notifications')}</Text>
         </View>
 
         <View style={styles.content}>
           <Card style={styles.settingsCard}>
             <CardContent>
-              <Text style={styles.sectionTitle}>{t('account.preferredLanguage')}</Text>
-              <View style={styles.divider} />
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>{t('account.preferredLanguage')}</Text>
+              <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
               <View style={styles.toggleRow}>
                 <View style={styles.toggleInfo}>
-                  <Text style={styles.toggleTitle}>Push Notifications</Text>
-                  <Text style={styles.toggleSubtitle}>Receive notifications on your device</Text>
+                  <Text style={[styles.toggleTitle, { color: colors.onSurface }]}>Push Notifications</Text>
+                  <Text style={[styles.toggleSubtitle, { color: colors.onSurfaceVariant }]}>Receive notifications on your device</Text>
                 </View>
                 <View style={styles.switchContainer}>
                   <MaterialIcons name="toggle-on" size={36} color="#C8922A" />
@@ -86,12 +87,12 @@ export default function NotificationsScreen() {
 
           <Card style={styles.settingsCard}>
             <CardContent>
-              <Text style={styles.sectionTitle}>Notification Preferences</Text>
-              <View style={styles.divider} />
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Notification Preferences</Text>
+              <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
               {notificationCategories.map((category, index) => (
                 <View key={index} style={[
                   styles.toggleRow,
-                  index > 0 && styles.dividerTop,
+                  index > 0 && [styles.dividerTop, { borderTopColor: colors.outlineVariant }],
                 ]}>
                   <View style={styles.toggleInfo}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -103,11 +104,11 @@ export default function NotificationsScreen() {
                         justifyContent: 'center', 
                         alignItems: 'center',
                       }}>
-                        <Ionicons name={category.icon} size={18} color={category.color} />
+                        <Ionicons name={category.icon as any} size={18} color={category.color} />
                       </View>
                       <View>
-                        <Text style={styles.toggleTitle}>{category.title}</Text>
-                        <Text style={styles.toggleSubtitle}>{category.subtitle}</Text>
+                        <Text style={[styles.toggleTitle, { color: colors.onSurface }]}>{category.title}</Text>
+                        <Text style={[styles.toggleSubtitle, { color: colors.onSurfaceVariant }]}>{category.subtitle}</Text>
                       </View>
                     </View>
                   </View>
@@ -115,7 +116,7 @@ export default function NotificationsScreen() {
                     {category.enabled ? (
                       <MaterialIcons name="toggle-on" size={36} color="#C8922A" />
                     ) : (
-                      <MaterialIcons name="toggle-off" size={36} color="#827564" />
+                      <MaterialIcons name="toggle-off" size={36} color={colors.outline} />
                     )}
                   </View>
                 </View>
@@ -125,30 +126,30 @@ export default function NotificationsScreen() {
 
           <Card style={styles.settingsCard}>
             <CardContent>
-              <Text style={styles.sectionTitle}>Quiet Hours</Text>
-              <View style={styles.divider} />
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Quiet Hours</Text>
+              <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
               <View style={styles.toggleRow}>
                 <View style={styles.toggleInfo}>
-                  <Text style={styles.toggleTitle}>Enable Quiet Hours</Text>
-                  <Text style={styles.toggleSubtitle}>Silence notifications during sleep time</Text>
+                  <Text style={[styles.toggleTitle, { color: colors.onSurface }]}>Enable Quiet Hours</Text>
+                  <Text style={[styles.toggleSubtitle, { color: colors.onSurfaceVariant }]}>Silence notifications during sleep time</Text>
                 </View>
                 <View style={styles.switchContainer}>
-                  <MaterialIcons name="toggle-off" size={36} color="#827564" />
+                  <MaterialIcons name="toggle-off" size={36} color={colors.outline} />
                 </View>
               </View>
-              <View style={styles.quietHoursPicker}>
+              <View style={[styles.quietHoursPicker, { borderTopColor: colors.outlineVariant }]}>
                 <View style={styles.timePicker}>
-                  <Text style={styles.timeLabel}>From</Text>
-                  <TouchableOpacity style={styles.timeButton}>
-                    <Text style={styles.timeButtonText}>10:00 PM</Text>
-                    <Ionicons name="chevron-down" size={20} color="#827564" />
+                  <Text style={[styles.timeLabel, { color: colors.onSurfaceVariant }]}>From</Text>
+                  <TouchableOpacity style={[styles.timeButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+                    <Text style={[styles.timeButtonText, { color: colors.onSurface }]}>10:00 PM</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.outline} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.timePicker}>
-                  <Text style={styles.timeLabel}>To</Text>
-                  <TouchableOpacity style={styles.timeButton}>
-                    <Text style={styles.timeButtonText}>8:00 AM</Text>
-                    <Ionicons name="chevron-down" size={20} color="#827564" />
+                  <Text style={[styles.timeLabel, { color: colors.onSurfaceVariant }]}>To</Text>
+                  <TouchableOpacity style={[styles.timeButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+                    <Text style={[styles.timeButtonText, { color: colors.onSurface }]}>8:00 AM</Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.outline} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -232,12 +233,7 @@ const styles = StyleSheet.create({
   switchContainer: {
     padding: 4,
   },
-  dividerTop: {
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#D4C4B0',
-    marginTop: 16,
-  },
+
   quietHoursPicker: {
     marginTop: 16,
     paddingTop: 16,

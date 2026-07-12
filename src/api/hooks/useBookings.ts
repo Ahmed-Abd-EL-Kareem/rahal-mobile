@@ -66,19 +66,12 @@ export function useBookingPayment(bookingId: string) {
   });
 }
 
-export function usePaymentStatus(bookingId: string) {
+export function useBookingPaymentStatus(bookingId: string) {
   return useQuery({
     queryKey: queryKeys.paymentStatus(bookingId),
     queryFn: () => api.get(`payments/booking/status/${bookingId}`).json<{ status: 'success'; data: any }>(),
     enabled: !!bookingId,
     refetchInterval: 3000,
     retry: 10,
-  });
-}
-
-export function useAIBookingConversation() {
-  return useMutation({
-    mutationFn: ({ message, sessionId, context }: { message: string; sessionId?: string; context?: any }) => 
-      api.post('ai/bookings/conversation', { json: { message, sessionId, context } }).json<{ status: 'success'; data: { sessionId: string; step: string; aiResponse: string; isComplete: boolean; bookingId: string | null; tokensUsed: number }; message: string }>(),
   });
 }

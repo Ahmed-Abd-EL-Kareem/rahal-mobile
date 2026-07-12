@@ -1,0 +1,364 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Rahal | Luxury Hotels in Luxor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#b12d17",
+                    "primary-fixed": "#ffdeac",
+                    "on-secondary-fixed-variant": "#1a4a6d",
+                    "sand-dark": "#1E1810",
+                    "on-primary-container": "#ffd289",
+                    "secondary": "#366286",
+                    "inverse-surface": "#31302d",
+                    "outline-variant": "#d3c4b2",
+                    "on-tertiary-fixed-variant": "#8e1201",
+                    "secondary-container": "#a8d3fd",
+                    "surface-container-low": "#F6F3EE",
+                    "surface-tint": "#7e5700",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#001d32",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#5f4100",
+                    "tertiary-fixed-dim": "#ffb4a5",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#e5e2dd",
+                    "on-error-container": "#93000a",
+                    "tertiary": "#8f1301",
+                    "on-tertiary-container": "#ffcdc4",
+                    "papyrus-green": "#2D7A4F",
+                    "on-tertiary-fixed": "#3f0400",
+                    "surface-variant": "#e5e2dd",
+                    "surface-dim": "#dcdad5",
+                    "surface-bright": "#fcf9f4",
+                    "surface": "#fcf9f4",
+                    "secondary-fixed-dim": "#a0cbf4",
+                    "primary": "#5f4100",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#4f4537",
+                    "error": "#ba1a1a",
+                    "primary-fixed-dim": "#f2be65",
+                    "secondary-fixed": "#cde5ff",
+                    "outline": "#817565",
+                    "pharaoh-gold": "#C8922A",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#281900",
+                    "on-surface": "#1c1c19",
+                    "primary-container": "#7e5700",
+                    "obsidian": "#141008",
+                    "tertiary-fixed": "#ffdad3",
+                    "nile-blue": "#1B4B6E",
+                    "surface-container-high": "#ebe8e3",
+                    "inverse-primary": "#f2be65",
+                    "surface-container": "#f0ede9",
+                    "background": "#fcf9f4",
+                    "on-background": "#1c1c19",
+                    "inverse-on-surface": "#f3f0eb",
+                    "on-secondary-container": "#2f5b7f",
+                    "on-primary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "margin-desktop": "40px",
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "section-padding-md": "6rem",
+                    "section-padding-lg": "8rem"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "display-lg-mobile": ["Playfair Display"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Playfair Display"],
+                    "headline-md-mobile": ["Playfair Display"],
+                    "display-lg": ["Playfair Display"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "headline-md-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .papyrus-border {
+            position: relative;
+            padding: 2px;
+            background: linear-gradient(to bottom, #C8922A, #C8922A) content-box, 
+                        linear-gradient(to bottom, #C8922A, #C8922A) border-box;
+            border: 1px solid transparent;
+        }
+        .papyrus-container {
+            border: 1px solid rgba(200, 146, 42, 0.3);
+            position: relative;
+        }
+        .papyrus-container::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border: 1px solid rgba(200, 146, 42, 0.15);
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        .glass-nav {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        @keyframes sparkle-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        .animate-sparkle {
+            animation: sparkle-pulse 2s infinite ease-in-out;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- Top AppBar (from JSON) -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 dark:bg-obsidian/90 backdrop-blur-md shadow-sm">
+<div class="flex justify-between items-center px-4 h-16 w-full max-w-[1600px] mx-auto">
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-pharaoh-gold transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md-mobile text-headline-md-mobile text-pharaoh-gold dark:text-primary-fixed-dim tracking-tight">Rahal</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-pharaoh-gold animate-sparkle" style="font-variation-settings: 'FILL' 1;">spark</span>
+<button class="p-2 text-on-surface-variant hover:text-pharaoh-gold transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-20 px-4 md:px-margin-desktop max-w-[1600px] mx-auto">
+<!-- Search Header -->
+<section class="mt-8 mb-12">
+<div class="max-w-3xl mx-auto">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 ps-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-pharaoh-gold" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<input class="block w-full ps-12 pe-16 py-5 bg-surface-container-low border-2 border-outline-variant/40 rounded-full font-body-lg text-on-surface focus:ring-2 focus:ring-pharaoh-gold/20 focus:border-pharaoh-gold transition-all shadow-sm" placeholder="Search for heritage destinations..." type="text" value="Luxury hotels near Luxor temple">
+<button class="absolute inset-y-2 right-2 px-6 bg-pharaoh-gold text-white rounded-full font-label-md hover:brightness-110 active:scale-95 transition-all flex items-center gap-2">
+<span>Search</span>
+</button>
+</div>
+<div class="mt-4 flex flex-wrap gap-2 justify-center">
+<span class="px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">history</span> History
+                    </span>
+<span class="px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">pool</span> Infinity Pool
+                    </span>
+<span class="px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant rounded-full font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restaurant</span> Fine Dining
+                    </span>
+</div>
+</div>
+</section>
+<!-- Search Results Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+<!-- Result 1: The Winter Palace -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden papyrus-container shadow-[0_4px_20px_-2px_rgba(80,69,54,0.1)] hover:shadow-[0_8px_30px_rgba(200,146,42,0.15)] transition-all duration-500">
+<div class="relative h-72 overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" data-alt="A majestic Victorian-era luxury hotel exterior in Luxor, Egypt, featuring red brick architecture and lush tropical gardens. The lighting is golden hour, casting long, warm shadows and highlighting the intricate ivory detailing of the balconies. The overall mood is one of timeless elegance and regal heritage, set against a clear desert sky." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDra9FRa-kPa8MlbCiAneHhcn-Ohq7X9ko92I-aPGxg16nCYNShy7zuMLKAjXfohweCXxSAN6GTi5RVgELJceXVT3anA139J5iUYE9LY3XtNGgSQO6EmW5nHf431P6jQV1kFVMy4oevuffFFTu-M5z9Wa93jVa9MHKlgCWLgcxxQhJXAqg1j9uqQBp8lC9Q0eiRsNLoz3k2zgRbof0M9Y0QSOT_Ni31haeDJerJxHBcjt-sATf8bIsHm2FaTHN1rNOrLMU-Zpwqm1M')"></div>
+<div class="absolute top-4 left-4 bg-pharaoh-gold text-white px-3 py-1 rounded-full font-label-sm flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">spark</span>
+                        Rahal Choice
+                    </div>
+<div class="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-4 left-4 text-white">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-pharaoh-gold" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md">5.0</span>
+</div>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<div>
+<p class="text-on-surface-variant font-label-sm uppercase tracking-widest mb-1">Luxor, Egypt</p>
+<h3 class="font-headline-md text-headline-md-mobile text-on-surface leading-tight">Sofitel Winter Palace</h3>
+</div>
+<div class="text-end">
+<p class="text-pharaoh-gold font-headline-md text-headline-md-mobile">$420</p>
+<p class="text-on-surface-variant font-label-sm">per night</p>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-md line-clamp-2 mb-6">Experience the grandeur of royalty at this historic 19th-century palace, nestled on the Nile banks near Luxor Temple.</p>
+<div class="mt-auto flex gap-3">
+<button class="flex-1 bg-pharaoh-gold text-white py-3 rounded-full font-label-md hover:brightness-110 transition-all active:scale-95">Book Stay</button>
+<button class="w-12 h-12 flex items-center justify-center border-2 border-outline-variant/40 rounded-full text-on-surface-variant hover:text-pharaoh-gold hover:border-pharaoh-gold transition-all">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Result 2: Nile View Resort -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden papyrus-container shadow-[0_4px_20px_-2px_rgba(80,69,54,0.1)] hover:shadow-[0_8px_30px_rgba(200,146,42,0.15)] transition-all duration-500">
+<div class="relative h-72 overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" data-alt="A modern luxury resort interior in Luxor with a focus on an infinity pool that seems to merge with the Nile River. The design uses high-end materials like polished limestone and dark wood accents. Sunset lighting bathes the scene in deep oranges and purples, creating a tranquil and technologically sophisticated atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDRAGXYTnQsql_qybxNtmlJgHzJgkGIQXzoIVll-sTCF-YPRdUBTV2c-7Gtz226mU38ZXJDX2bZKdsjQFCatKzxP7YNaBpMxflQoXpy2BtS-S3RoeXeglWOh7q73X7RDCNMw4n0N9eHY3Ogsv_XGy0bcKnSDBy3zntQw_AwcAn0FjhPIDHipeScsSVnXHyEBiBc34Rol_89CSdKmUG6JOBlgPjhfcw3EhEqavX_MaUHc1GdTLA3TN5hVk-mWqU9HciKb2nBlOjNofI')"></div>
+<div class="absolute bottom-4 left-4 text-white">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-pharaoh-gold" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md">4.8</span>
+</div>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<div>
+<p class="text-on-surface-variant font-label-sm uppercase tracking-widest mb-1">East Bank, Luxor</p>
+<h3 class="font-headline-md text-headline-md-mobile text-on-surface leading-tight">Hilton Luxor Resort &amp; Spa</h3>
+</div>
+<div class="text-end">
+<p class="text-pharaoh-gold font-headline-md text-headline-md-mobile">$285</p>
+<p class="text-on-surface-variant font-label-sm">per night</p>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-md line-clamp-2 mb-6">A serene oasis offering world-class spa facilities and panoramic views of the ancient Theban Necropolis across the water.</p>
+<div class="mt-auto flex gap-3">
+<button class="flex-1 bg-pharaoh-gold text-white py-3 rounded-full font-label-md hover:brightness-110 transition-all active:scale-95">Book Stay</button>
+<button class="w-12 h-12 flex items-center justify-center border-2 border-outline-variant/40 rounded-full text-on-surface-variant hover:text-pharaoh-gold hover:border-pharaoh-gold transition-all">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State / Suggestion Card -->
+<div class="flex flex-col items-center justify-center p-8 bg-surface-container/50 border-2 border-dashed border-outline-variant/60 rounded-xl papyrus-container text-center">
+<div class="w-20 h-20 mb-6 bg-primary-fixed/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-[40px] text-pharaoh-gold animate-sparkle" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<h3 class="font-headline-md text-headline-md-mobile text-on-surface mb-2">Refine with AI</h3>
+<p class="text-on-surface-variant font-body-md mb-8">Looking for something more specific? Ask Rahal to find boutique stays with private Dahabiya views.</p>
+<div class="w-full space-y-3">
+<button class="w-full py-4 px-6 bg-surface-container-highest/50 rounded-lg font-label-md text-start hover:bg-surface-container-highest transition-all flex items-center justify-between group">
+                        "Find hotels with sunset terraces"
+                        <span class="material-symbols-outlined text-pharaoh-gold opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+</button>
+<button class="w-full py-4 px-6 bg-surface-container-highest/50 rounded-lg font-label-md text-start hover:bg-surface-container-highest transition-all flex items-center justify-between group">
+                        "Luxury stays under $300"
+                        <span class="material-symbols-outlined text-pharaoh-gold opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Result 3: Steigenberger -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden papyrus-container shadow-[0_4px_20px_-2px_rgba(80,69,54,0.1)] hover:shadow-[0_8px_30px_rgba(200,146,42,0.15)] transition-all duration-500">
+<div class="relative h-72 overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" data-alt="A luxurious riverside terrace at a hotel in Luxor, featuring elegant white lounge furniture and Egyptian papyrus-patterned textiles. The foreground shows a crystal-clear cocktail, while the background reveals the silhouette of the Luxor Temple against a twilight sky of deep indigo and gold. The style is crisp, high-end editorial photography." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAI4eFvxx6ucI9L-0DVkWawx1h1BAxKXrb-4ipdfbZZPO7wgEM80TremfrKndKUb6k5DucVNGj0wwFDUGLfBBO_ZVb0N_ioadzfiLpDNom6Y8O9gXuxvRGiwIceiDDRAjVeKHZ8dL1JxZC57a5OEjYXRm1MNicoajEmoIplY9XEN7CZA66CWIae1zjhOjgHcV3Zn5TGPHfGqSgO2BAi098e491cwRPugwySyRP8Cl6ePqY8bVliy1iLy3R2mJ4_5U3X91W0__S7mzA')"></div>
+<div class="absolute bottom-4 left-4 text-white">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px] text-pharaoh-gold" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md">4.7</span>
+</div>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-2">
+<div>
+<p class="text-on-surface-variant font-label-sm uppercase tracking-widest mb-1">Nile Promenade, Luxor</p>
+<h3 class="font-headline-md text-headline-md-mobile text-on-surface leading-tight">Steigenberger Nile Palace</h3>
+</div>
+<div class="text-end">
+<p class="text-pharaoh-gold font-headline-md text-headline-md-mobile">$195</p>
+<p class="text-on-surface-variant font-label-sm">per night</p>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-md line-clamp-2 mb-6">Located directly on the Nile, this hotel blends contemporary comfort with traditional Egyptian hospitality.</p>
+<div class="mt-auto flex gap-3">
+<button class="flex-1 bg-pharaoh-gold text-white py-3 rounded-full font-label-md hover:brightness-110 transition-all active:scale-95">Book Stay</button>
+<button class="w-12 h-12 flex items-center justify-center border-2 border-outline-variant/40 rounded-full text-on-surface-variant hover:text-pharaoh-gold hover:border-pharaoh-gold transition-all">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Heritage Divider -->
+<div class="flex items-center justify-center gap-4 py-16">
+<div class="h-[1px] flex-1 bg-pharaoh-gold/30"></div>
+<div class="flex items-center gap-1 text-pharaoh-gold">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">temple_hindu</span>
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">temple_hindu</span>
+</div>
+<div class="h-[1px] flex-1 bg-pharaoh-gold/30"></div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (from JSON) -->
+<nav class="fixed bottom-0 w-full flex justify-around items-center h-20 pb-safe px-4 bg-surface dark:bg-obsidian shadow-[0_-4px_20px_-2px_rgba(80,69,54,0.1)] border-t border-outline-variant/40 z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-pharaoh-gold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-pharaoh-gold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-pharaoh-gold font-bold active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">hotel</span>
+<span class="font-label-sm text-label-sm">Hotels</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-pharaoh-gold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="font-label-sm text-label-sm">Trips</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-pharaoh-gold transition-colors active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Account</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for hotel cards
+        document.querySelectorAll('.group').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Search bar active state simulation
+        const searchInput = document.querySelector('input');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('scale-[1.01]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('scale-[1.01]');
+        });
+    </script>
+</body></html>

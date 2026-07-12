@@ -5,7 +5,7 @@
       "home": "Home",
       "destinations": "Destinations",
       "hotels": "Hotels",
-      "planner": "AI Planner",
+      "planner": "Rahal Chat",
       "trips": "Trips",
       "pricing": "Pricing",
       "about": "About",
@@ -990,6 +990,59 @@
       "pendingTitle": "Waiting for Confirmation",
       "pendingSubtitle": "Your transaction is currently pending confirmation from your bank or payment provider.",
       "refreshStatus": "Refresh Status"
+    }
+  },
+  "tripGenerate": {
+    "title": "Rahal",
+    "aiTravelArchitect": "AI Travel Architect",
+    "heroTitle": "Curate Your Egyptian Legacy",
+    "heroSubtitle": "Our AI blends historical wisdom with modern luxury to design a journey through time, tailored exclusively to your rhythm.",
+    "currentFocus": "Current Focus",
+    "luxorEgypt": "Luxor, Egypt",
+    "luxorSubtitle": "The World's Greatest Open Air Museum",
+    "whereToTravel": "Where would you like to travel?",
+    "destinationPlaceholder": "Enter city or region (e.g. Giza, Aswan...)",
+    "howManyDays": "How many days?",
+    "day": "Day",
+    "days": "Days",
+    "chooseBudget": "Choose your budget tier",
+    "budgetTiers": {
+      "budget": {
+        "label": "Budget",
+        "desc": "Affordable options"
+      },
+      "midRange": {
+        "label": "Mid-Range",
+        "desc": "Comfort & value"
+      },
+      "luxury": {
+        "label": "Luxury",
+        "desc": "Premium experience"
+      }
+    },
+    "howManyTravelers": "How many travelers?",
+    "travelers": "Travelers",
+    "person": "Person",
+    "people": "People",
+    "selectInterests": "Select your interests",
+    "interests": {
+      "history": "Historical Sites",
+      "beach": "Beaches",
+      "adventure": "Adventure",
+      "cultural": "Culture",
+      "food": "Food & Dining",
+      "nature": "Nature",
+      "shopping": "Shopping",
+      "wellness": "Wellness"
+    },
+    "generateBtn": "Generate AI Trip",
+    "generatingBtn": "Architecting Journey...",
+    "disclaimer": "Our AI generates unique travel routes by fusing historic itineraries, seasonal weather advisories, and hospitality data.",
+    "errors": {
+      "destination": "Please enter a destination",
+      "interests": "Please select at least one interest",
+      "failed": "Failed to generate trip",
+      "errorTitle": "Error"
     }
   }
 }

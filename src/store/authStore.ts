@@ -62,9 +62,9 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          const response = await api.post<{ token: string; data: { user: User } }>('auth/login', {
+          const response = await api.post('auth/login', {
             json: { email, password },
-          });
+          }).json<{ token: string; data: { user: User } }>();
           
           const { token, data } = response;
           await setAuthToken(token);
@@ -86,9 +86,9 @@ export const useAuthStore = create<AuthState>()(
       signup: async (name: string, email: string, password: string) => {
         set({ isLoading: true });
         try {
-          const response = await api.post<{ token: string; data: { user: User } }>('auth/signup', {
+          const response = await api.post('auth/signup', {
             json: { name, email, password },
-          });
+          }).json<{ token: string; data: { user: User } }>();
           
           const { token, data } = response;
           await setAuthToken(token);
@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>()(
         if (!token) return;
         
         try {
-          const response = await api.get<{ data: { user: User } }>('users/me');
+          const response = await api.get('users/me').json<{ data: { user: User } }>();
           set({ user: response.data.user });
           await get().fetchSubscription();
         } catch {
@@ -136,9 +136,9 @@ export const useAuthStore = create<AuthState>()(
         
         set({ isLoading: true });
         try {
-          const response = await api.patch<{ data: { user: User } }>(`users/${user._id}`, {
+          const response = await api.patch(`users/${user._id}`, {
             json: data,
-          });
+          }).json<{ data: { user: User } }>();
           
           set({ user: response.data.user, isLoading: false });
         } catch (error) {
@@ -152,7 +152,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           await api.patch('users/change-password', {
             json: { currentPassword, newPassword },
-          });
+          }).json<void>();
           set({ isLoading: false });
         } catch (error) {
           set({ isLoading: false });
@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthState>()(
         
         set({ isLoading: true, token });
         try {
-          const response = await api.get<{ data: { user: User } }>('users/me');
+          const response = await api.get('users/me').json<{ data: { user: User } }>();
           set({
             user: response.data.user,
             token,
@@ -192,7 +192,7 @@ export const useAuthStore = create<AuthState>()(
 
       fetchSubscription: async () => {
         try {
-          const response = await api.get<{ data: Subscription }>('subscriptions/my');
+          const response = await api.get('subscriptions/my').json<{ data: Subscription }>();
           set({ subscription: response.data });
         } catch {
           set({ subscription: null });

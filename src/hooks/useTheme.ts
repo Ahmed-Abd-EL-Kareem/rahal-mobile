@@ -1,13 +1,13 @@
 // src/hooks/useTheme.ts
-import { useColorScheme } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { colors } from '@/constants/colors';
 import { useUIStore } from '@/store/uiStore';
 
 export function useTheme() {
-  const systemColorScheme = useColorScheme();
+  const { colorScheme: nativeWindScheme } = useColorScheme();
   const { isRTL } = useUIStore();
   
-  const colorScheme = isRTL ? 'dark' : (systemColorScheme || 'light');
+  const colorScheme: 'light' | 'dark' = nativeWindScheme === 'dark' ? 'dark' : 'light';
   const themeColors = colors[colorScheme];
 
   return {
