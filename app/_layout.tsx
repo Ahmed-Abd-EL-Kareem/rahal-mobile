@@ -10,6 +10,8 @@ import i18n from '@/i18n';
 import { queryClient } from '@/api/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { setAuthStoreRef } from '@/api/client';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || '';
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
@@ -19,6 +21,9 @@ export default function RootLayout() {
   const { setLanguage } = useUIStore();
 
   useEffect(() => {
+    // Wire up auth store ref for 401 response handling
+    setAuthStoreRef(useAuthStore);
+
     const timer = setTimeout(() => {
       checkAuth();
       // Sync language with i18n
@@ -39,32 +44,40 @@ export default function RootLayout() {
   }, []);
 
   const postHogContent = (
-    <Stack screenOptions={{ headerShown: false }} />
+    <Stack 
+      screenOptions={{ 
+        headerShown: false,
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+      }} 
+    />
   );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <I18nextProvider i18n={i18n}>
-          {posthogKey ? (
-            <PostHogProvider
-              apiKey={posthogKey}
-              options={{
-                host: posthogHost,
-                flushAt: 10,
-                flushInterval: 30000,
-              }}
-              autocapture={{
-                captureTouches: false,
-              }}
-            >
-              {postHogContent}
-            </PostHogProvider>
-          ) : (
-            postHogContent
-          )}
-        </I18nextProvider>
-      </QueryClientProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <I18nextProvider i18n={i18n}>
+            {posthogKey ? (
+              <PostHogProvider
+                apiKey={posthogKey}
+                options={{
+                  host: posthogHost,
+                  flushAt: 10,
+                  flushInterval: 30000,
+                }}
+                autocapture={{
+                  captureTouches: false,
+                }}
+              >
+                {postHogContent}
+              </PostHogProvider>
+            ) : (
+              postHogContent
+            )}
+          </I18nextProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }

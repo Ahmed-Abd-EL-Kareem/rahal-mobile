@@ -31,7 +31,7 @@ export default function AIHotelSearchResultsScreen() {
     limit: 20,
   });
 
-  const results = hasSearched ? (hotelsResponse?.data || []) : [];
+  const results = hasSearched ? (hotelsResponse?.pages.flatMap(p => p.data) || []) : [];
 
   const handleSearch = (queryText: string) => {
     if (!queryText.trim()) return;
@@ -139,7 +139,7 @@ export default function AIHotelSearchResultsScreen() {
           {/* Search Results Grid */}
           {!isLoading && hasSearched && (
             <View className="flex-col gap-6">
-              {results.map((hotel) => {
+              {results.map((hotel: any) => {
                 const isFav = favoriteHotels.some(h => h._id === hotel._id);
                 const mockRating = (4.5 + (hotel.stars * 0.08)).toFixed(1);
                 

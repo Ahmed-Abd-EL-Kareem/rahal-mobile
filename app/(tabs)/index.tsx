@@ -82,16 +82,19 @@ export default function HomeScreen() {
   const isRTL = i18n.language === 'ar';
 
   // Backend API connection
-  const { data: apiDestinations, isLoading: isLoadingDestinations } = useDestinations({ limit: 3 });
-  const { data: apiHotels, isLoading: isLoadingHotels } = useHotels({ limit: 3 });
+  const { data: apiDestinationsResponse, isLoading: isLoadingDestinations } = useDestinations({ limit: 3 });
+  const { data: apiHotelsResponse, isLoading: isLoadingHotels } = useHotels({ limit: 3 });
+
+  const apiDestinations = apiDestinationsResponse?.pages.flatMap(p => p.data);
+  const apiHotels = apiHotelsResponse?.pages.flatMap(p => p.data);
 
   // Use API data if available, fallback to beautiful mocks matching Stitch design
-  const destinations = apiDestinations?.data && apiDestinations.data.length > 0
-    ? apiDestinations.data 
+  const destinations = apiDestinations && apiDestinations.length > 0
+    ? apiDestinations 
     : MOCK_DESTINATIONS;
 
-  const hotels = apiHotels?.data && apiHotels.data.length > 0 
-    ? apiHotels.data 
+  const hotels = apiHotels && apiHotels.length > 0 
+    ? apiHotels 
     : MOCK_HOTELS;
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

@@ -67,3 +67,5 @@ expo-env.d.ts
 .env.*
 .env.example
 LICENSE
+rahal-app-plan.md
+rahal-mobile-api-reference.md

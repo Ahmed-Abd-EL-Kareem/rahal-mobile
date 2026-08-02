@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { SideMenu } from '@/components/layout/SideMenu';
 
 // Premium high-res mock data from the Stitch Design System
 const MOCK_DESTINATIONS = [
@@ -85,9 +86,13 @@ export default function ExploreScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Fetch destinations from the API
-  const { data: apiDestinations, isLoading } = useDestinations({
-    limit: 20,
+  const { data: apiDestinationsResponse, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useDestinations({
+    limit: 12,
   });
+
+  const apiDestinations = useMemo(() => {
+    return apiDestinationsResponse?.pages.flatMap(p => p.data) || [];
+  }, [apiDestinationsResponse]);
 
   // Categories list translation keys and filters
   const categoryTabs = [
@@ -101,8 +106,8 @@ export default function ExploreScreen() {
 
   // Resolve destinations to display: API data, or fallback to Stitch mocks
   const rawDestinations = useMemo(() => {
-    if (apiDestinations?.data && apiDestinations.data.length > 0) {
-      return apiDestinations.data;
+    if (apiDestinations && apiDestinations.length > 0) {
+      return apiDestinations;
     }
     return MOCK_DESTINATIONS;
   }, [apiDestinations]);
@@ -392,122 +397,7 @@ export default function ExploreScreen() {
       </View>
 
       {/* Dropdown Menu Modal */}
-      {isMenuOpen && (
-        <View className="absolute inset-0 z-[100] flex-row">
-          {/* Backdrop */}
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setIsMenuOpen(false)}
-            className="absolute inset-0 bg-black/60"
-          />
-          
-          {/* Menu Drawer Content */}
-          <View 
-            className="w-[75%] max-w-[300px] h-full shadow-2xl p-6 justify-between border-r"
-            style={{ 
-              backgroundColor: isDark ? '#1C1A14' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(80, 69, 54, 0.2)' : 'rgba(212, 196, 176, 0.3)'
-            }}
-          >
-            <View>
-              {/* Drawer Header */}
-              <View className="flex-row justify-between items-center mb-8 mt-4">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
-                    <Ionicons name="compass" size={20} color="#C8922A" />
-                  </View>
-                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">
-                    Rahal
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
-                  <Ionicons name="close" size={24} color="#817565" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Navigation Items */}
-              <View className="gap-1">
-                {[
-                  { label: t('common.nav.home', 'Home'), icon: 'home-outline', route: '/(tabs)' },
-                  { label: t('common.nav.destinations', 'Explore'), icon: 'compass-outline', route: '/(tabs)/explore' },
-                  { label: t('common.nav.hotels', 'Hotels'), icon: 'business-outline', route: '/(tabs)/hotel' },
-                  { label: t('common.nav.planner', 'AI Planner'), icon: 'sparkles-outline', route: '/(tabs)/ai' },
-                  { label: t('common.nav.trips', 'My Trips'), icon: 'map-outline', route: '/(tabs)/trips' },
-                  { label: t('common.nav.profile', 'Profile'), icon: 'person-outline', route: '/(tabs)/profile' },
-                ].map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      router.push(item.route as any);
-                    }}
-                    className="flex-row items-center gap-4 py-3.5 px-4 rounded-xl"
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={item.icon as any} size={20} color="#C8922A" />
-                    <Text className="text-label-md font-medium" style={{ color: colors.onSurface }}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Bottom Section: Language & Logout */}
-            <View className="gap-6 pt-6 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
-              {/* Language Switcher */}
-              <View className="flex-row justify-between items-center">
-                <Text className="text-label-md font-medium" style={{ color: colors.onSurfaceVariant }}>
-                  {t('common.language', 'Language')}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newLang = i18n.language === 'en' ? 'ar' : 'en';
-                    i18n.changeLanguage(newLang);
-                  }}
-                  className="bg-pharaoh-gold/10 px-3.5 py-1.5 rounded-full border"
-                  style={{ borderColor: 'rgba(200, 146, 42, 0.2)' }}
-                >
-                  <Text className="text-label-sm text-pharaoh-gold font-bold">
-                    {i18n.language === 'en' ? 'العربية' : 'English'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Login / Logout Button */}
-              {isAuthenticated ? (
-                <TouchableOpacity
-                  onPress={async () => {
-                    setIsMenuOpen(false);
-                    logout();
-                    router.replace('/(onboarding)');
-                  }}
-                  className="w-full h-12 border border-tertiary rounded-full flex-row items-center justify-center gap-2"
-                  style={{ borderColor: '#8F1301' }}
-                >
-                  <Ionicons name="log-out-outline" size={18} color="#8F1301" />
-                  <Text className="text-tertiary text-label-md font-bold uppercase tracking-wider">
-                    {t('common.nav.logout', 'Log Out')}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsMenuOpen(false);
-                    router.push('/(auth)/login');
-                  }}
-                  className="w-full h-12 bg-primary rounded-full flex-row items-center justify-center gap-2"
-                >
-                  <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
-                  <Text className="text-white text-label-md font-bold uppercase tracking-wider">
-                    {t('common.nav.login', 'Log In')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      )}
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </View>
   );
 }

@@ -12,8 +12,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: (credentials: { email: string; password: string }) => 
       api.post('auth/login', { json: credentials }).json<{ status: 'success'; token: string; data: { user: any }; message: string }>(),
-    onSuccess: async (data) => {
-      await login(data.token, data.data.user);
+    onSuccess: async (data, variables) => {
+      await login(variables.email, variables.password);
       showToast({ type: 'success', message: data.message || 'Welcome back!' });
       router.replace('/(tabs)');
     },
@@ -30,8 +30,8 @@ export function useSignup() {
   return useMutation({
     mutationFn: (data: { name: string; email: string; password: string }) => 
       api.post('auth/signup', { json: data }).json<{ status: 'success'; token: string; data: { user: any }; message: string }>(),
-    onSuccess: async (data) => {
-      await signup(data.data.user.name, data.data.user.email, '');
+    onSuccess: async (data, variables) => {
+      await signup(variables.name, variables.email, variables.password);
       showToast({ type: 'success', message: data.message });
       router.replace('/(tabs)');
     },

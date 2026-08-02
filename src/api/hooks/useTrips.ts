@@ -1,22 +1,41 @@
 // src/api/hooks/useTrips.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import { Trip, TripFilters } from '@/types/api';
 
+export interface TripsResponse {
+  status: 'success';
+  length: number;
+  data: Trip[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export function useTrips(params?: TripFilters) {
-  return useQuery({
+  return useInfiniteQuery<TripsResponse>({
     queryKey: queryKeys.trips(params),
-    queryFn: () => {
+    initialPageParam: 1,
+    queryFn: ({ pageParam = 1 }) => {
       const searchParams = new URLSearchParams();
+      searchParams.append('page', String(pageParam));
+      searchParams.append('limit', String(params?.limit || 10));
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
+          if (value !== undefined && value !== null && value !== '' && key !== 'page' && key !== 'limit') {
             searchParams.append(key, String(value));
           }
         });
       }
-      return api.get(`trips?${searchParams.toString()}`).json<{ status: 'success'; length: number; data: Trip[]; pagination: any }>();
+      return api.get(`trips?${searchParams.toString()}`).json<TripsResponse>();
+    },
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.page ?? lastPage.pagination?.page ?? 1;
+      const totalPages = lastPage.totalPages ?? lastPage.pagination?.totalPages ?? 1;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
     },
   });
 }

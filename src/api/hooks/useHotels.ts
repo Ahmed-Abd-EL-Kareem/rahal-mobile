@@ -1,22 +1,41 @@
 // src/api/hooks/useHotels.ts
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import { Hotel, HotelFilters, HotelMeta } from '@/types/api';
 
+export interface HotelsResponse {
+  status: 'success';
+  length: number;
+  data: Hotel[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export function useHotels(params?: HotelFilters) {
-  return useQuery({
+  return useInfiniteQuery<HotelsResponse>({
     queryKey: queryKeys.hotels(params),
-    queryFn: () => {
+    initialPageParam: 1,
+    queryFn: ({ pageParam = 1 }) => {
       const searchParams = new URLSearchParams();
+      searchParams.append('page', String(pageParam));
+      searchParams.append('limit', String(params?.limit || 12));
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
+          if (value !== undefined && value !== null && value !== '' && key !== 'page' && key !== 'limit') {
             searchParams.append(key, String(value));
           }
         });
       }
-      return api.get(`hotels?${searchParams.toString()}`).json<{ status: 'success'; length: number; data: Hotel[]; pagination: any }>();
+      return api.get(`hotels?${searchParams.toString()}`).json<HotelsResponse>();
+    },
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.page ?? lastPage.pagination?.page ?? 1;
+      const totalPages = lastPage.totalPages ?? lastPage.pagination?.totalPages ?? 1;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
     },
   });
 }

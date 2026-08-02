@@ -1,7 +1,7 @@
 // src/store/authStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { api } from '@/api/client';
+import { api, setAuthToken, getAuthToken, clearAuthToken } from '@/api/client';
 import { useMMKVStore } from './mmkvStore';
 import { User, Subscription } from '@/types/api';
 
@@ -36,18 +36,6 @@ const mmkvStorage = {
   removeItem: (name: string) => {
     useMMKVStore.getState().delete(name);
   },
-};
-
-const setAuthToken = async (token: string) => {
-  useMMKVStore.getState().setString('auth_token', token);
-};
-
-const getAuthToken = async () => {
-  return useMMKVStore.getState().getString('auth_token') || null;
-};
-
-const clearAuthToken = async () => {
-  useMMKVStore.getState().delete('auth_token');
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -125,8 +113,11 @@ export const useAuthStore = create<AuthState>()(
           const response = await api.get('users/me').json<{ data: { user: User } }>();
           set({ user: response.data.user });
           await get().fetchSubscription();
-        } catch {
-          get().logout();
+        } catch (error: any) {
+          const status = error?.response?.status;
+          if (status === 401 || status === 403) {
+            await get().logout();
+          }
         }
       },
 
@@ -178,15 +169,21 @@ export const useAuthStore = create<AuthState>()(
           });
           
           await get().fetchSubscription();
-        } catch {
-          await clearAuthToken();
-          set({
-            user: null,
-            token: null,
-            subscription: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+        } catch (error: any) {
+          const status = error?.response?.status;
+          if (status === 401 || status === 403) {
+            await clearAuthToken();
+            set({
+              user: null,
+              token: null,
+              subscription: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          } else {
+            // Network/timeout error: keep local session state intact
+            set({ isLoading: false });
+          }
         }
       },
 
@@ -207,7 +204,6 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => mmkvStorage),
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         subscription: state.subscription,
         isAuthenticated: state.isAuthenticated,
       }),

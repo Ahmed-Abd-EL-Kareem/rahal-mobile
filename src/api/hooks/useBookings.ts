@@ -1,29 +1,41 @@
 // src/api/hooks/useBookings.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../client';
 import { queryKeys } from '../queryKeys';
 import { Booking } from '@/types/api';
 
-interface BookingsResponse {
+export interface BookingsResponse {
   status: 'success';
   length: number;
   data: Booking[];
-  pagination: { total: number; page: number; limit: number; totalPages: number };
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  pagination?: { total: number; page: number; limit: number; totalPages: number };
 }
 
 export function useBookings(params?: { page?: number; limit?: number; status?: string }) {
-  return useQuery<BookingsResponse>({
+  return useInfiniteQuery<BookingsResponse>({
     queryKey: queryKeys.bookings(params),
-    queryFn: async () => {
+    initialPageParam: 1,
+    queryFn: async ({ pageParam = 1 }) => {
       const searchParams = new URLSearchParams();
+      searchParams.append('page', String(pageParam));
+      searchParams.append('limit', String(params?.limit || 10));
       if (params) {
         Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
+          if (value !== undefined && value !== null && value !== '' && key !== 'page' && key !== 'limit') {
             searchParams.append(key, String(value));
           }
         });
       }
       return api.get(`bookings?${searchParams.toString()}`).json<BookingsResponse>();
+    },
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.page ?? lastPage.pagination?.page ?? 1;
+      const totalPages = lastPage.totalPages ?? lastPage.pagination?.totalPages ?? 1;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
     },
   });
 }

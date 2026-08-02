@@ -10,6 +10,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTrips } from '@/api/hooks/useTrips';
 import { useBookings, useCancelBooking } from '@/api/hooks/useBookings';
 import { useTheme } from '@/hooks/useTheme';
+import { SideMenu } from '@/components/layout/SideMenu';
 
 export default function TripsScreen() {
   const { t, i18n } = useTranslation();
@@ -23,15 +24,15 @@ export default function TripsScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Backend queries
-  const { data: tripsResponse, isLoading: tripsLoading } = useTrips();
-  const { data: bookingsResponse, isLoading: bookingsLoading } = useBookings();
+  const { data: tripsResponse, isLoading: tripsLoading, fetchNextPage: fetchNextTripsPage, hasNextPage: hasNextTripsPage, isFetchingNextPage: isFetchingNextTrips, refetch: refetchTrips } = useTrips({ limit: 10 });
+  const { data: bookingsResponse, isLoading: bookingsLoading, fetchNextPage: fetchNextBookingsPage, hasNextPage: hasNextBookingsPage, isFetchingNextPage: isFetchingNextBookings, refetch: refetchBookings } = useBookings({ limit: 10 });
   const { mutateAsync: cancelBooking } = useCancelBooking();
 
   const isTripsTab = activeTab === 'trips';
   const isBookingsTab = activeTab === 'bookings';
 
-  const trips = tripsResponse?.data || [];
-  const bookings = bookingsResponse?.data || [];
+  const trips = tripsResponse?.pages.flatMap(p => p.data) || [];
+  const bookings = bookingsResponse?.pages.flatMap(p => p.data) || [];
 
   const handleCancelBooking = (bookingId: string) => {
     Alert.alert(
@@ -323,8 +324,24 @@ export default function TripsScreen() {
             /* Bookings Cards List */
             <View className="gap-4">
               {bookings.map((booking) => {
-                const hotelName = booking.hotel?.name ? getLocalizedValue(booking.hotel.name) : 'Luxury Nile Sanctuary';
-                const statusColorMap = {
+                const hotelName = booking.hotel && typeof booking.hotel === 'object' && booking.hotel.name 
+                  ? getLocalizedValue(booking.hotel.name) 
+                  : 'Luxury Nile Sanctuary';
+                const cityStr = booking.hotel && typeof booking.hotel === 'object' && booking.hotel.city
+                  ? booking.hotel.city
+                  : 'Cairo, Egypt';
+
+                const roomCount = Array.isArray(booking.rooms) 
+                  ? booking.rooms.reduce((acc, r) => acc + (r.quantity || 1), 0)
+                  : typeof booking.rooms === 'number' ? booking.rooms : 1;
+
+                const guestCount = typeof booking.guests === 'number' 
+                  ? booking.guests 
+                  : Array.isArray(booking.rooms)
+                    ? booking.rooms.reduce((acc, r) => acc + ((r.guests?.adults || 0) + (r.guests?.children || 0) || 1), 0)
+                    : 1;
+
+                const statusColorMap: Record<string, { text: string; bg: string }> = {
                   confirmed: { text: 'text-success', bg: 'bg-success/15' },
                   pending: { text: 'text-pharaoh-gold', bg: 'bg-pharaoh-gold/15' },
                   canceled: { text: 'text-error', bg: 'bg-error/15' },
@@ -343,12 +360,12 @@ export default function TripsScreen() {
                           {hotelName}
                         </Text>
                         <Text className="text-xs text-on-surface-variant dark:text-outline">
-                          {booking.hotel?.city || 'Cairo, Egypt'}
+                          {cityStr}
                         </Text>
                       </View>
                       <View className={`px-2.5 py-1 rounded-full ${statusTheme.bg}`}>
                         <Text className={`font-bold text-[9px] uppercase tracking-wider ${statusTheme.text}`}>
-                          {booking.status}
+                          {booking.status || 'pending'}
                         </Text>
                       </View>
                     </View>
@@ -365,7 +382,7 @@ export default function TripsScreen() {
                       <View className="flex-row justify-between">
                         <Text className="text-xs text-on-surface-variant dark:text-outline">Rooms & Guests</Text>
                         <Text className="text-xs font-semibold text-on-surface dark:text-dark-on-surface">
-                          {booking.rooms} Room(s) • {booking.guests} Guest(s)
+                          {roomCount} Room(s) • {guestCount} Guest(s)
                         </Text>
                       </View>
                     </View>
@@ -374,7 +391,7 @@ export default function TripsScreen() {
                       <View>
                         <Text className="text-[10px] text-on-surface-variant dark:text-outline uppercase tracking-wider">Total Price</Text>
                         <Text className="text-lg font-bold text-primary dark:text-primary-fixed mt-0.5">
-                          ${booking.totalPrice} {booking.currency}
+                          ${booking.totalPrice ?? 0} {booking.currency || 'EGP'}
                         </Text>
                       </View>
                       
@@ -416,106 +433,7 @@ export default function TripsScreen() {
       )}
 
       {/* Dropdown Menu Modal */}
-      {isMenuOpen && (
-        <View className="absolute inset-0 z-[100] flex-row">
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setIsMenuOpen(false)}
-            className="absolute inset-0 bg-black/60"
-          />
-          <View 
-            className="w-[75%] max-w-[300px] h-full shadow-2xl p-6 justify-between border-r"
-            style={{ 
-              backgroundColor: colors.surface, 
-              borderColor: colors.outlineVariant + '33' 
-            }}
-          >
-            <View>
-              <View className="flex-row justify-between items-center mb-8 mt-4">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
-                    <Ionicons name="compass" size={20} color="#C8922A" />
-                  </View>
-                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">Rahal</Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
-                  <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <View className="gap-1">
-                {[
-                  { label: t('common.nav.home', 'Home'), icon: 'home-outline', route: '/(tabs)' },
-                  { label: t('common.nav.destinations', 'Explore'), icon: 'compass-outline', route: '/(tabs)/explore' },
-                  { label: t('common.nav.hotels', 'Hotels'), icon: 'business-outline', route: '/(tabs)/hotel' },
-                  { label: t('common.nav.planner', 'AI Planner'), icon: 'sparkles-outline', route: '/(tabs)/ai' },
-                  { label: t('common.nav.trips', 'My Trips'), icon: 'map-outline', route: '/(tabs)/trips' },
-                  { label: t('common.nav.profile', 'Profile'), icon: 'person-outline', route: '/(tabs)/profile' },
-                ].map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      router.push(item.route as any);
-                    }}
-                    className="flex-row items-center gap-4 py-3.5 px-4 rounded-xl"
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={item.icon as any} size={20} color="#C8922A" />
-                    <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View className="gap-6 pt-6 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
-              <View className="flex-row justify-between items-center">
-                <Text className="font-semibold text-label-md" style={{ color: colors.onSurfaceVariant }}>{t('common.language', 'Language')}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newLang = i18n.language === 'en' ? 'ar' : 'en';
-                    i18n.changeLanguage(newLang);
-                  }}
-                  className="bg-pharaoh-gold/10 px-3 py-1 rounded-lg border border-pharaoh-gold/20"
-                >
-                  <Text className="text-pharaoh-gold font-bold text-label-sm">{i18n.language === 'en' ? 'العربية' : 'English'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Login / Logout Button */}
-              {isAuthenticated ? (
-                <TouchableOpacity
-                  onPress={async () => {
-                    setIsMenuOpen(false);
-                    logout();
-                    router.replace('/(onboarding)');
-                  }}
-                  className="w-full h-12 border border-tertiary rounded-full flex-row items-center justify-center gap-2"
-                  style={{ borderColor: '#8F1301' }}
-                >
-                  <Ionicons name="log-out-outline" size={18} color="#8F1301" />
-                  <Text className="text-tertiary text-label-md font-bold uppercase tracking-wider">
-                    {t('common.nav.logout', 'Log Out')}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsMenuOpen(false);
-                    router.push('/(auth)/login');
-                  }}
-                  className="w-full h-12 bg-primary rounded-full flex-row items-center justify-center gap-2"
-                >
-                  <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
-                  <Text className="text-white text-label-md font-bold uppercase tracking-wider">
-                    {t('common.nav.login', 'Log In')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      )}
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </View>
   );
 }

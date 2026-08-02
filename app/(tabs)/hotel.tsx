@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import i18n from '@/i18n';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { SideMenu } from '@/components/layout/SideMenu';
 
 const CITIES = [
   'Cairo', 'Luxor', 'Aswan', 'Alexandria', 'Sharm El-Sheikh',
@@ -31,13 +32,13 @@ export default function HotelsScreen() {
 
   const params = useLocalSearchParams<{ city?: string; aiQuery?: string }>();
   
-  const { data: hotelsResponse, isLoading } = useHotels({
+  const { data: hotelsResponse, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useHotels({
     city: params.city || selectedCity || undefined,
     search: params.aiQuery || searchQuery || undefined,
-    limit: 20,
+    limit: 12,
   });
 
-  const hotels = hotelsResponse?.data || [];
+  const hotels = hotelsResponse?.pages.flatMap(p => p.data) || [];
 
   useEffect(() => {
     if (params.aiQuery) {
@@ -416,75 +417,7 @@ export default function HotelsScreen() {
       </ScrollView>
 
       {/* Dropdown Menu Modal */}
-      {isMenuOpen && (
-        <View className="absolute inset-0 z-[100] flex-row">
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setIsMenuOpen(false)}
-            className="absolute inset-0 bg-black/60"
-          />
-          <View 
-            className="w-[75%] max-w-[300px] h-full shadow-2xl p-6 justify-between border-r"
-            style={{ 
-              backgroundColor: colors.surface, 
-              borderColor: colors.outlineVariant + '33' 
-            }}
-          >
-            <View>
-              <View className="flex-row justify-between items-center mb-8 mt-4">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
-                    <Ionicons name="compass" size={20} color="#C8922A" />
-                  </View>
-                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">Rahal</Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
-                  <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <View className="gap-1">
-                {[
-                  { label: t('common.nav.home', 'Home'), icon: 'home-outline', route: '/(tabs)' },
-                  { label: t('common.nav.destinations', 'Explore'), icon: 'compass-outline', route: '/(tabs)/explore' },
-                  { label: t('common.nav.hotels', 'Hotels'), icon: 'business-outline', route: '/(tabs)/hotel' },
-                  { label: t('common.nav.planner', 'AI Planner'), icon: 'sparkles-outline', route: '/(tabs)/ai' },
-                  { label: t('common.nav.trips', 'My Trips'), icon: 'map-outline', route: '/(tabs)/trips' },
-                  { label: t('common.nav.profile', 'Profile'), icon: 'person-outline', route: '/(tabs)/profile' },
-                ].map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      router.push(item.route as any);
-                    }}
-                    className="flex-row items-center gap-4 py-3.5 px-4 rounded-xl"
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={item.icon as any} size={20} color="#C8922A" />
-                    <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View className="gap-6 pt-6 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
-              <View className="flex-row justify-between items-center">
-                <Text className="font-semibold text-label-md" style={{ color: colors.onSurfaceVariant }}>{t('common.language', 'Language')}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newLang = i18n.language === 'en' ? 'ar' : 'en';
-                    i18n.changeLanguage(newLang);
-                  }}
-                  className="bg-pharaoh-gold/10 px-3 py-1 rounded-lg border border-pharaoh-gold/20"
-                >
-                  <Text className="text-pharaoh-gold font-bold text-label-sm">{i18n.language === 'en' ? 'العربية' : 'English'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      )}
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
       {/* Floating AI Action Button */}
       <View className="absolute bottom-6 right-6 z-50">

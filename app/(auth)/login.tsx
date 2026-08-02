@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 
 const loginSchema = z.object({
   email: z.string().email('auth.errors.invalidCredentials'),
@@ -25,6 +26,7 @@ export default function LoginScreen() {
   const { showToast } = useUIStore();
   const { colors, isDark } = useTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const { promptAsync, request, isAuthenticating } = useGoogleAuth();
   
   const {
     control,
@@ -172,11 +174,18 @@ export default function LoginScreen() {
 
           {/* Google Button */}
           <TouchableOpacity
-            onPress={() => {/* Google OAuth */}}
-            style={styles.googleButton}
+            onPress={() => promptAsync()}
+            disabled={!request || isAuthenticating}
+            style={[styles.googleButton, (!request || isAuthenticating) && { opacity: 0.6 }]}
           >
-            <Ionicons name="logo-google" size={18} color="#C8922A" />
-            <Text style={styles.googleButtonText}>{t('auth.googleBtn')}</Text>
+            {isAuthenticating ? (
+              <ActivityIndicator color="#C8922A" size="small" />
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={18} color="#C8922A" />
+                <Text style={styles.googleButtonText}>{t('auth.googleBtn')}</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Signup Link */}
