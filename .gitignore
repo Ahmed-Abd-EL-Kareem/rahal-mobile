@@ -14,6 +14,13 @@ web-build/
 *.aab
 *.ipa
 *.mobileprovision
+android/.gradle/
+android/build/
+android/app/build/
+android/.cxx/
+android/app/.cxx/
+ios/Pods/
+ios/build/
 
 # IDE
 .vscode/

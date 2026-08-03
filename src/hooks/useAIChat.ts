@@ -43,11 +43,8 @@ export function useAIChat(): UseAIChatReturn {
     addMessage(chatId, userMessage);
 
     try {
-      const session = getChatSession(chatId);
-      const messages = session?.messages.map(m => ({ role: m.role, content: m.content })) || [];
-
       const response = await api.post('ai/chat', {
-        json: { messages: [...messages, { role: 'user', content }] },
+        json: { message: content, sessionId: chatId },
       }).json<SuccessResponse<AIChatResponse>>();
 
       const aiMessage: ChatMessage = {

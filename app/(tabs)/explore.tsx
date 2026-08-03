@@ -1,6 +1,6 @@
 // app/(tabs)/explore.tsx
 import React, { useState, useMemo } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, Image, TextInput } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -183,92 +183,100 @@ export default function ExploreScreen() {
       </View>
 
       {/* Main Content Canvas */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        
-        {/* Search and Filter Section */}
-        <View className="p-4 flex-col gap-4">
-          <View className="flex-row gap-3 items-center">
-            <View 
-              className="flex-1 flex-row items-center h-14 px-4 rounded-xl border"
-              style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '33' }}
-            >
-              <Ionicons name="search-outline" size={20} color="#817565" style={{ marginRight: 10 }} />
-              <TextInput
-                className="flex-1 h-full text-body-md text-left"
-                style={{ color: colors.onSurface }}
-                placeholder={t('destinationsListing.searchPlaceholder') || 'Search ancient wonders...'}
-                placeholderTextColor={isDark ? '#9C8F7C' : '#81756580'}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+      <FlatList
+        data={filteredDestinations}
+        keyExtractor={(item) => item._id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+        }}
+        onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        ListHeaderComponent={
+          /* Search and Filter Section */
+          <View className="p-4 flex-col gap-4">
+            <View className="flex-row gap-3 items-center">
+              <View 
+                className="flex-1 flex-row items-center h-14 px-4 rounded-xl border"
+                style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '33' }}
+              >
+                <Ionicons name="search-outline" size={20} color="#817565" style={{ marginRight: 10 }} />
+                <TextInput
+                  className="flex-1 h-full text-body-md text-left"
+                  style={{ color: colors.onSurface }}
+                  placeholder={t('destinationsListing.searchPlaceholder') || 'Search ancient wonders...'}
+                  placeholderTextColor={isDark ? '#9C8F7C' : '#81756580'}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+              <TouchableOpacity 
+                activeOpacity={0.7}
+                className="h-14 w-14 items-center justify-center rounded-xl border active:bg-surface-container"
+                style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '33' }}
+              >
+                <Ionicons name="options-outline" size={22} color={colors.onSurfaceVariant} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              activeOpacity={0.7}
-              className="h-14 w-14 items-center justify-center rounded-xl border active:bg-surface-container"
-              style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '33' }}
-            >
-              <Ionicons name="options-outline" size={22} color={colors.onSurfaceVariant} />
-            </TouchableOpacity>
-          </View>
 
-          {/* Category Tabs Scroll */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-          >
-            {categoryTabs.map((tab) => {
-              const isActive = selectedFilter === tab.id;
-              
-              if (tab.id === 'near_me') {
+            {/* Category Tabs Scroll */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+            >
+              {categoryTabs.map((tab) => {
+                const isActive = selectedFilter === tab.id;
+                
+                if (tab.id === 'near_me') {
+                  return (
+                    <TouchableOpacity
+                      key={tab.id}
+                      onPress={() => setSelectedFilter('near_me')}
+                      activeOpacity={0.8}
+                      className={`flex-row items-center gap-2 px-5 py-2.5 rounded-full shadow-md shadow-pharaoh-gold/20 active:scale-95 ${
+                        isActive ? 'bg-pharaoh-gold' : 'bg-surface-container border border-outline-variant/40'
+                      }`}
+                    >
+                      <Ionicons name="navigate-outline" size={16} color={isActive ? '#FFFFFF' : '#C8922A'} />
+                      <Text className={`text-label-md font-medium ${isActive ? 'text-white' : 'text-on-surface-variant'}`}>
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }
+
                 return (
                   <TouchableOpacity
                     key={tab.id}
-                    onPress={() => setSelectedFilter('near_me')}
+                    onPress={() => setSelectedFilter(tab.id as any)}
                     activeOpacity={0.8}
-                    className={`flex-row items-center gap-2 px-5 py-2.5 rounded-full shadow-md shadow-pharaoh-gold/20 active:scale-95 ${
-                      isActive ? 'bg-pharaoh-gold' : 'bg-surface-container border border-outline-variant/40'
+                    className={`px-5 py-2.5 rounded-full border active:scale-95 ${
+                      isActive 
+                        ? 'bg-pharaoh-gold border-pharaoh-gold' 
+                        : 'bg-surface-container border-outline-variant/40'
                     }`}
                   >
-                    <Ionicons name="navigate-outline" size={16} color={isActive ? '#FFFFFF' : '#C8922A'} />
                     <Text className={`text-label-md font-medium ${isActive ? 'text-white' : 'text-on-surface-variant'}`}>
                       {tab.label}
                     </Text>
                   </TouchableOpacity>
                 );
-              }
+              })}
+            </ScrollView>
+          </View>
+        }
+        renderItem={({ item: dest }) => {
+          const locale = i18n.language === 'ar' ? 'ar' : 'en';
+          const name = dest.name[locale] || dest.name['en'];
+          const priceTier = (dest as any).priceTier || (dest.averageBudgetPerDay > 300 ? '$$$' : '$$');
+          const rating = (dest as any).rating || 4.8;
+          const reviews = (dest as any).reviews || 1200;
+          const hours = (dest as any).hours || 'Open • 8:00 AM';
 
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  onPress={() => setSelectedFilter(tab.id as any)}
-                  activeOpacity={0.8}
-                  className={`px-5 py-2.5 rounded-full border active:scale-95 ${
-                    isActive 
-                      ? 'bg-pharaoh-gold border-pharaoh-gold' 
-                      : 'bg-surface-container border-outline-variant/40'
-                  }`}
-                >
-                  <Text className={`text-label-md font-medium ${isActive ? 'text-white' : 'text-on-surface-variant'}`}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Destination List (Bento style grid) */}
-        <View className="px-4 py-4 flex-col gap-8">
-          {filteredDestinations.map((dest) => {
-            const locale = i18n.language === 'ar' ? 'ar' : 'en';
-            const name = dest.name[locale] || dest.name['en'];
-            const priceTier = (dest as any).priceTier || (dest.averageBudgetPerDay > 300 ? '$$$' : '$$');
-            const rating = (dest as any).rating || 4.8;
-            const reviews = (dest as any).reviews || 1200;
-            const hours = (dest as any).hours || 'Open • 8:00 AM';
-
-            return (
+          return (
+            <View className="px-4">
               <TouchableOpacity 
                 key={dest._id} 
                 activeOpacity={0.9}
@@ -331,52 +339,57 @@ export default function ExploreScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            );
-          })}
-
-          {filteredDestinations.length === 0 && (
-            <View className="py-12 items-center justify-center">
-              <Ionicons name="search-outline" size={48} color="#9C8F7C" />
-              <Text className="text-on-surface-variant text-body-md mt-4 text-center">
-                {t('destinationsListing.noDestinations') || 'No destinations found matching your filters.'}
-              </Text>
             </View>
-          )}
-        </View>
-
-        {/* Ask Rahal AI Banner */}
-        <View className="mx-4 mt-4 mb-8">
-          <View 
-            className="relative w-full rounded-2xl border p-6 flex-col gap-4"
-            style={{ backgroundColor: isDark ? colors.surfaceContainerLow : 'rgba(200, 146, 42, 0.1)', borderColor: colors.primary + '4d' }}
-          >
-            <View className="flex-row items-center gap-2">
-              <Ionicons name="sparkles" size={18} color="#C8922A" />
-              <Text className="font-label-md text-pharaoh-gold font-bold uppercase tracking-widest">
-                AI Concierge
-              </Text>
-            </View>
-            <View className="flex-col gap-1">
-              <Text className="font-headline text-[20px] text-on-surface dark:text-dark-on-surface font-bold text-left">
-                Curious about the Pharaohs?
-              </Text>
-              <Text className="text-on-surface-variant dark:text-dark-on-surface-variant font-body-md leading-snug text-left">
-                Get instant insights, hidden history, and personalized route planning for your next heritage adventure.
-              </Text>
-            </View>
-            <TouchableOpacity 
-              onPress={() => router.push('/(tabs)/ai')}
-              activeOpacity={0.8}
-              className="flex-row items-center justify-center gap-2.5 px-6 py-3.5 bg-pharaoh-gold rounded-full shadow-lg shadow-pharaoh-gold/20 active:scale-95"
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
-              <Text className="text-white font-label-md font-bold">
-                Ask Rahal AI
-              </Text>
-            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <View className="py-12 items-center justify-center">
+            <Ionicons name="search-outline" size={48} color="#9C8F7C" />
+            <Text className="text-on-surface-variant text-body-md mt-4 text-center">
+              {t('destinationsListing.noDestinations') || 'No destinations found matching your filters.'}
+            </Text>
           </View>
-        </View>
-      </ScrollView>
+        }
+        ListFooterComponent={
+          <View>
+            {isFetchingNextPage && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 20 }} />
+            )}
+            {/* Ask Rahal AI Banner */}
+            <View className="mx-4 mt-4 mb-8">
+              <View 
+                className="relative w-full rounded-2xl border p-6 flex-col gap-4"
+                style={{ backgroundColor: isDark ? colors.surfaceContainerLow : 'rgba(200, 146, 42, 0.1)', borderColor: colors.primary + '4d' }}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="sparkles" size={18} color="#C8922A" />
+                  <Text className="font-label-md text-pharaoh-gold font-bold uppercase tracking-widest">
+                    AI Concierge
+                  </Text>
+                </View>
+                <View className="flex-col gap-1">
+                  <Text className="font-headline text-[20px] text-on-surface dark:text-dark-on-surface font-bold text-left">
+                    Curious about the Pharaohs?
+                  </Text>
+                  <Text className="text-on-surface-variant dark:text-dark-on-surface-variant font-body-md leading-snug text-left">
+                    Get instant insights, hidden history, and personalized route planning for your next heritage adventure.
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push('/(tabs)/ai')}
+                  activeOpacity={0.8}
+                  className="flex-row items-center justify-center gap-2.5 px-6 py-3.5 bg-pharaoh-gold rounded-full shadow-lg shadow-pharaoh-gold/20 active:scale-95"
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#FFFFFF" />
+                  <Text className="text-white font-label-md font-bold">
+                    Ask Rahal AI
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        }
+      />
 
       {/* Floating Action Button (FAB) for AI Concierge */}
       <View className="absolute bottom-6 right-6 z-50">
