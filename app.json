@@ -53,6 +53,19 @@
       "expo-web-browser",
       "expo-location",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-2.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#5F4100",
+          "dark": {
+            "image": "./assets/logo-2.png",
+            "backgroundColor": "#141008"
+          }
+        }
+      ],
+      [
         "expo-image",
         {
           "sourcemaps": true

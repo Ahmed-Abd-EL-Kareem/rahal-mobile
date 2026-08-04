@@ -67,7 +67,7 @@ class APIClient {
   constructor() {
     this.client = ky.create({
       prefix: API_URL,
-      timeout: 30000,
+      timeout: 60000,
       hooks: {
         beforeRequest: [beforeRequestHook],
         afterResponse: [afterResponseHook],

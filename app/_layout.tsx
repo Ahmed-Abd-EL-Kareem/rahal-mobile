@@ -2,6 +2,7 @@
 import '../global.css';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { I18nextProvider } from 'react-i18next';
@@ -12,6 +13,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { setAuthStoreRef } from '@/api/client';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Prevent splash screen from auto-hiding before asset/auth loading is complete
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || '';
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
@@ -24,12 +28,20 @@ export default function RootLayout() {
     // Wire up auth store ref for 401 response handling
     setAuthStoreRef(useAuthStore);
 
-    const timer = setTimeout(() => {
-      checkAuth();
-      // Sync language with i18n
-      const lang = i18n.language;
-      setLanguage(lang as 'en' | 'ar');
-    }, 0);
+    const initApp = async () => {
+      try {
+        await checkAuth();
+        // Sync language with i18n
+        const lang = i18n.language;
+        setLanguage(lang as 'en' | 'ar');
+      } catch (err) {
+        console.error('App initialization error:', err);
+      } finally {
+        await SplashScreen.hideAsync().catch(() => {});
+      }
+    };
+
+    initApp();
     
     const handleLangChange = (lng: string) => {
       setLanguage(lng as 'en' | 'ar');
@@ -38,7 +50,6 @@ export default function RootLayout() {
     i18n.on('languageChanged', handleLangChange);
     
     return () => {
-      clearTimeout(timer);
       i18n.off('languageChanged', handleLangChange);
     };
   }, []);

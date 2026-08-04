@@ -43,25 +43,38 @@ export function useAIChat(): UseAIChatReturn {
     addMessage(chatId, userMessage);
 
     try {
-      const response = await api.post('ai/chat', {
+      const res = await api.post('ai/chat', {
         json: { message: content, sessionId: chatId },
-      }).json<SuccessResponse<AIChatResponse>>();
+      }).json<any>();
+
+      const replyText = res?.data?.reply || res?.data?.message || res?.reply || res?.message || 'I am sorry, I could not process your request at this moment.';
+      const tokens = res?.data?.tokensUsed || res?.tokensUsed;
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}_ai`,
         role: 'assistant',
-        content: response.data.reply,
+        content: replyText,
         timestamp: new Date(),
-        tokensUsed: response.data.tokensUsed,
+        tokensUsed: tokens,
       };
       addMessage(chatId, aiMessage);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to send message';
-      showToast({ type: 'error', message });
+      let errorMessage = 'Failed to send message';
+      if (error?.response) {
+        try {
+          const errData = await error.response.json();
+          errorMessage = errData.message || errData.error || errorMessage;
+        } catch {
+          errorMessage = error.message || errorMessage;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      showToast({ type: 'error', message: errorMessage });
       addMessage(chatId, {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',
-        content: message,
+        content: `⚠️ ${errorMessage}. Tap below to resend.`,
         timestamp: new Date(),
       });
     } finally {

@@ -82,7 +82,7 @@ export default function ExploreScreen() {
 
   const { favoriteDestinations, toggleDestinationFavorite } = useFavoritesStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'near_me' | 'pyramids' | 'temples' | 'museums' | 'oases' | 'all'>('near_me');
+  const [selectedFilter, setSelectedFilter] = useState<'near_me' | 'landmarks' | 'pyramids' | 'temples' | 'museums' | 'oases' | 'all'>('near_me');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Fetch destinations from the API
@@ -97,6 +97,7 @@ export default function ExploreScreen() {
   // Categories list translation keys and filters
   const categoryTabs = [
     { id: 'near_me', label: t('destinationsListing.nearMe') || 'Near Me', icon: 'near-me' },
+    { id: 'landmarks', label: 'Landmarks' },
     { id: 'pyramids', label: 'Pyramids' },
     { id: 'temples', label: 'Temples' },
     { id: 'museums', label: 'Museums' },
@@ -132,6 +133,9 @@ export default function ExploreScreen() {
       if (selectedFilter === 'all') return true;
       if (selectedFilter === 'near_me') return true; // Near Me displays all surrounding list in this layout
       
+      if (selectedFilter === 'landmarks') {
+        return dest.category === 'landmark' || dest.category === 'historical' || nameText.includes('landmark') || nameText.includes('plateau');
+      }
       if (selectedFilter === 'pyramids') {
         return nameText.includes('pyramid') || nameText.includes('هرم') || dest.category === 'landmark';
       }
@@ -165,19 +169,22 @@ export default function ExploreScreen() {
           borderBottomColor: colors.outlineVariant,
         }}
       >
-        <View className="flex-row items-center gap-4">
+        <View className="flex-row items-center gap-4 flex-1 mr-2">
           <TouchableOpacity 
             onPress={() => setIsMenuOpen(true)}
-            className="active:scale-95"
+            className="active:scale-95 p-1"
             activeOpacity={0.7}
           >
             <Ionicons name="menu-outline" size={24} color="#C8922A" />
           </TouchableOpacity>
-          <Text className="font-headline text-2xl text-pharaoh-gold font-bold leading-tight">
+          <Text 
+            className="font-headline text-2xl text-pharaoh-gold font-bold leading-tight flex-shrink-1" 
+            numberOfLines={1}
+          >
             Rahal
           </Text>
         </View>
-        <TouchableOpacity className="active:scale-95" activeOpacity={0.7}>
+        <TouchableOpacity className="active:scale-95 p-1" activeOpacity={0.7}>
           <Ionicons name="notifications-outline" size={24} color="#C8922A" />
         </TouchableOpacity>
       </View>
@@ -224,7 +231,8 @@ export default function ExploreScreen() {
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 4, paddingBottom: 4 }}
+              style={{ marginHorizontal: -4 }}
             >
               {categoryTabs.map((tab) => {
                 const isActive = selectedFilter === tab.id;

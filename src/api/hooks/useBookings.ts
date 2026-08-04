@@ -32,10 +32,19 @@ export function useBookings(params?: { page?: number; limit?: number; status?: s
       }
       return api.get(`bookings?${searchParams.toString()}`).json<BookingsResponse>();
     },
-    getNextPageParam: (lastPage) => {
-      const currentPage = lastPage.page ?? lastPage.pagination?.page ?? 1;
-      const totalPages = lastPage.totalPages ?? lastPage.pagination?.totalPages ?? 1;
-      return currentPage < totalPages ? currentPage + 1 : undefined;
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      const currentPage = typeof lastPageParam === 'number' ? lastPageParam : (lastPage.page ?? lastPage.pagination?.page ?? 1);
+      const totalPages = lastPage.totalPages ?? lastPage.pagination?.totalPages;
+      if (totalPages !== undefined && totalPages !== null) {
+        return currentPage < totalPages ? currentPage + 1 : undefined;
+      }
+      const total = lastPage.total ?? lastPage.pagination?.total;
+      const limit = lastPage.limit ?? lastPage.pagination?.limit ?? 10;
+      if (total !== undefined && total !== null) {
+        return (currentPage * limit) < total ? currentPage + 1 : undefined;
+      }
+      const itemsCount = lastPage.data?.length ?? 0;
+      return itemsCount >= limit ? currentPage + 1 : undefined;
     },
   });
 }

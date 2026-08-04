@@ -294,98 +294,100 @@ export default function AIScreen() {
         </View>
       </View>
 
-      {/* Chat Conversation Canvas */}
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={{ 
-          paddingTop: 16,
-          paddingBottom: 210, 
-          paddingHorizontal: 16 
-        }}
-        showsVerticalScrollIndicator={false}
-        className="flex-1 z-10"
+      {/* Chat & Keyboard Canvas */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        style={{ flex: 1 }}
+        className="flex-1"
       >
-        {/* Welcome message when chat session is empty */}
-        {messages.length === 0 ? (
-          <View className="flex-col items-start max-w-[85%] mb-4">
-            <View className="bg-surface-container-low dark:bg-sand-dark p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/35 dark:border-outline-variant/10">
-              <Text className="font-body-md text-on-surface dark:text-dark-on-surface text-sm leading-relaxed">
-                {i18n.language === 'ar' 
-                  ? 'مرحباً! أنا كونسيرج رحال الذكي. كيف يمكنني مساعدتك في نسج رحلتك عبر عجائب مصر الخالدة اليوم؟' 
-                  : 'Marhaban! I am your Rahal AI Concierge. How may I help you weave your journey through the timeless wonders of Egypt today?'}
+        {/* Chat Conversation Canvas */}
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ 
+            paddingTop: 16,
+            paddingBottom: 24, 
+            paddingHorizontal: 16 
+          }}
+          showsVerticalScrollIndicator={false}
+          className="flex-1 z-10"
+        >
+          {/* Welcome message when chat session is empty */}
+          {messages.length === 0 ? (
+            <View className="flex-col items-start max-w-[85%] mb-4">
+              <View className="bg-surface-container-low dark:bg-sand-dark p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/35 dark:border-outline-variant/10">
+                <Text className="font-body-md text-on-surface dark:text-dark-on-surface text-sm leading-relaxed">
+                  {i18n.language === 'ar' 
+                    ? 'مرحباً! أنا كونسيرج رحال الذكي. كيف يمكنني مساعدتك في نسج رحلتك عبر عجائب مصر الخالدة اليوم؟' 
+                    : 'Marhaban! I am your Rahal AI Concierge. How may I help you weave your journey through the timeless wonders of Egypt today?'}
+                </Text>
+              </View>
+              <Text className="text-[10px] text-outline dark:text-dark-outline mt-1 ml-1 uppercase tracking-tighter">
+                Just now
               </Text>
             </View>
-            <Text className="text-[10px] text-outline dark:text-dark-outline mt-1 ml-1 uppercase tracking-tighter">
-              Just now
-            </Text>
-          </View>
-        ) : (
-          <View className="flex-col gap-4">
-            {messages.map((msg, i) => {
-              const isUser = msg.role === 'user';
-              return (
-                <View
-                  key={msg.id || i}
-                  className={`flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[90%] ${isUser ? 'ml-auto' : 'mr-auto'}`}
-                >
+          ) : (
+            <View className="flex-col gap-4">
+              {messages.map((msg, i) => {
+                const isUser = msg.role === 'user';
+                return (
                   <View
-                    className={`p-4 rounded-2xl shadow-sm ${
-                      isUser 
-                        ? 'bg-pharaoh-gold rounded-tr-none shadow-md' 
-                        : 'bg-surface-container-low dark:bg-sand-dark rounded-tl-none border border-outline-variant/25 dark:border-outline-variant/10'
-                    }`}
+                    key={msg.id || i}
+                    className={`flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[90%] ${isUser ? 'ml-auto' : 'mr-auto'}`}
                   >
-                    {isUser ? (
-                      <Text className="font-body-md text-white text-[14.5px] leading-relaxed">
-                        {msg.content}
-                      </Text>
-                    ) : (
-                      <View className="w-full">
-                        {renderFormattedContent(msg.content)}
-                      </View>
-                    )}
-                    
-                    {!isUser && msg.tokensUsed && (
-                      <Text className="text-[10px] text-outline dark:text-dark-outline mt-2 text-right">
-                        {t('home.chatbot.tokensUsed', { count: msg.tokensUsed })}
-                      </Text>
-                    )}
+                    <View
+                      className={`p-4 rounded-2xl shadow-sm ${
+                        isUser 
+                          ? 'bg-pharaoh-gold rounded-tr-none shadow-md' 
+                          : 'bg-surface-container-low dark:bg-sand-dark rounded-tl-none border border-outline-variant/25 dark:border-outline-variant/10'
+                      }`}
+                    >
+                      {isUser ? (
+                        <Text className="font-body-md text-white text-[14.5px] leading-relaxed">
+                          {msg.content}
+                        </Text>
+                      ) : (
+                        <View className="w-full">
+                          {renderFormattedContent(msg.content)}
+                        </View>
+                      )}
+                      
+                      {!isUser && msg.tokensUsed && (
+                        <Text className="text-[10px] text-outline dark:text-dark-outline mt-2 text-right">
+                          {t('home.chatbot.tokensUsed', { count: msg.tokensUsed })}
+                        </Text>
+                      )}
+                    </View>
+                    <Text className="text-[10px] text-outline dark:text-dark-outline mt-1 px-1 uppercase tracking-tighter">
+                      {formatTime(msg.timestamp)}
+                    </Text>
                   </View>
-                  <Text className="text-[10px] text-outline dark:text-dark-outline mt-1 px-1 uppercase tracking-tighter">
-                    {formatTime(msg.timestamp)}
-                  </Text>
+                );
+              })}
+              
+              {/* Assistant Loading Indicator */}
+              {isLoading && (
+                <View className="flex-col items-start max-w-[85%]">
+                  <View 
+                    style={{ backgroundColor: colors['surface-container-low'], borderColor: colors.outlineVariant + '40' }}
+                    className="p-4 rounded-2xl rounded-tl-none border"
+                  >
+                    <ActivityIndicator size="small" color="#C8922A" />
+                  </View>
                 </View>
-              );
-            })}
-            
-            {/* Assistant Loading Indicator */}
-            {isLoading && (
-              <View className="flex-col items-start max-w-[85%]">
-                <View 
-                  style={{ backgroundColor: colors['surface-container-low'], borderColor: colors.outlineVariant + '40' }}
-                  className="p-4 rounded-2xl rounded-tl-none border"
-                >
-                  <ActivityIndicator size="small" color="#C8922A" />
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
+              )}
+            </View>
+          )}
+        </ScrollView>
 
-      {/* Bottom Floating Interaction Area */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        className="absolute bottom-0 left-0 right-0 z-40 bg-transparent"
-      >
+        {/* Bottom Interaction Area */}
         <View 
           style={{ 
             paddingBottom: Math.max(insets.bottom, 12),
             backgroundColor: colors.background + 'F2',
             borderTopColor: colors.outlineVariant + '1A',
           }} 
-          className="px-4 pt-3 border-t"
+          className="px-4 pt-3 border-t z-40"
         >
           {/* Suggestion Chips */}
           <ScrollView 
