@@ -39,12 +39,12 @@ export function useBookings(params?: { page?: number; limit?: number; status?: s
         return currentPage < totalPages ? currentPage + 1 : undefined;
       }
       const total = lastPage.total ?? lastPage.pagination?.total;
-      const limit = lastPage.limit ?? lastPage.pagination?.limit ?? 10;
       if (total !== undefined && total !== null) {
-        return (currentPage * limit) < total ? currentPage + 1 : undefined;
+        const fetchedCount = allPages.reduce((sum, p) => sum + (p.data?.length ?? 0), 0);
+        return fetchedCount < total ? currentPage + 1 : undefined;
       }
       const itemsCount = lastPage.data?.length ?? 0;
-      return itemsCount >= limit ? currentPage + 1 : undefined;
+      return itemsCount >= 10 ? currentPage + 1 : undefined;
     },
   });
 }

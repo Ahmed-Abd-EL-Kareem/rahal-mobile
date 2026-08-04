@@ -42,11 +42,25 @@ export function useGoogleAuth() {
         .finally(() => {
           setIsAuthenticating(false);
         });
+    } else if (response?.type === 'error') {
+      showToast({ type: 'error', message: response.error?.message || 'Google Sign-In was cancelled or failed' });
     }
   }, [response]);
 
+  const handlePromptAsync = async () => {
+    try {
+      if (!request) {
+        showToast({ type: 'error', message: 'Google Auth is initializing. Please try again.' });
+        return;
+      }
+      await promptAsync();
+    } catch (err: any) {
+      showToast({ type: 'error', message: err?.message || 'Failed to launch Google Sign-In' });
+    }
+  };
+
   return {
-    promptAsync,
+    promptAsync: handlePromptAsync,
     request,
     isAuthenticating,
   };

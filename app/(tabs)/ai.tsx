@@ -296,7 +296,7 @@ export default function AIScreen() {
 
       {/* Chat & Keyboard Canvas */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         style={{ flex: 1 }}
         className="flex-1"

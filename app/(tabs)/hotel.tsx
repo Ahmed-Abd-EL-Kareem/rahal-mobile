@@ -35,7 +35,7 @@ export default function HotelsScreen() {
   const { data: hotelsResponse, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useHotels({
     city: params.city || selectedCity || undefined,
     search: params.aiQuery || searchQuery || undefined,
-    limit: 12,
+    limit: 10,
   });
 
   const hotels = hotelsResponse?.pages.flatMap(p => p.data) || [];

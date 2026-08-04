@@ -87,7 +87,7 @@ export default function ExploreScreen() {
 
   // Fetch destinations from the API
   const { data: apiDestinationsResponse, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } = useDestinations({
-    limit: 12,
+    limit: 10,
   });
 
   const apiDestinations = useMemo(() => {
@@ -231,8 +231,7 @@ export default function ExploreScreen() {
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={{ gap: 8, paddingHorizontal: 4, paddingBottom: 4 }}
-              style={{ marginHorizontal: -4 }}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 4 }}
             >
               {categoryTabs.map((tab) => {
                 const isActive = selectedFilter === tab.id;
