@@ -225,7 +225,10 @@ export interface Subscription {
 // AI
 export interface AIChatResponse {
   reply: string;
-  tokensUsed: number;
+  tokensUsed?: number;
+  sessionId?: string;
+  title?: string;
+  messages?: any[];
 }
 
 export interface AIHotelSearchResponse {

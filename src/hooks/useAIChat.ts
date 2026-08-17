@@ -45,10 +45,10 @@ export function useAIChat(): UseAIChatReturn {
     try {
       const res = await api.post('ai/chat', {
         json: { message: content, sessionId: chatId },
-      }).json<any>();
+      }).json<{ status: string; message: string; data: { reply: string; tokensUsed?: number; sessionId: string } }>();
 
-      const replyText = res?.data?.reply || res?.data?.message || res?.reply || res?.message || 'I am sorry, I could not process your request at this moment.';
-      const tokens = res?.data?.tokensUsed || res?.tokensUsed;
+      const replyText = res?.data?.reply || 'I am sorry, I could not process your request at this moment.';
+      const tokens = res?.data?.tokensUsed;
 
       const aiMessage: ChatMessage = {
         id: `msg_${Date.now()}_ai`,
