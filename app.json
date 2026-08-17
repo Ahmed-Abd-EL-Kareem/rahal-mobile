@@ -68,12 +68,6 @@
         }
       ],
       [
-        "expo-image",
-        {
-          "sourcemaps": true
-        }
-      ],
-      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.com.rahal.mobile",

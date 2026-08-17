@@ -139,7 +139,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             borderWidth,
             borderColor,
             borderRadius: 12,
-            transitionDuration: 200,
+            transitionDuration: '200ms',
           }}
         >
           {renderLeftIcon()}
