@@ -2,6 +2,7 @@
   "expo": {
     "name": "Rahal",
     "slug": "rahal-mobile",
+    "scheme": "rahal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo-2.png",
