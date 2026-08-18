@@ -49,11 +49,24 @@ export function useHotels(params?: HotelFilters) {
   });
 }
 
-export function useHotel(slug: string) {
+const isMongoObjectId = (val: string) => /^[0-9a-fA-F]{24}$/.test(val);
+
+export function useHotel(idOrSlug: string) {
   return useQuery({
-    queryKey: queryKeys.hotel(slug),
-    queryFn: () => api.get(`hotels/slug/${slug}`).json<{ status: 'success'; data: Hotel }>(),
-    enabled: !!slug,
+    queryKey: queryKeys.hotel(idOrSlug),
+    queryFn: () => {
+      const endpoint = isMongoObjectId(idOrSlug) ? `hotels/${idOrSlug}` : `hotels/slug/${idOrSlug}`;
+      return api.get(endpoint).json<{ status: 'success'; data: Hotel }>();
+    },
+    enabled: !!idOrSlug,
+  });
+}
+
+export function useHotelById(id: string) {
+  return useQuery({
+    queryKey: ['hotel', 'byId', id],
+    queryFn: () => api.get(`hotels/${id}`).json<{ status: 'success'; data: Hotel }>(),
+    enabled: !!id,
   });
 }
 

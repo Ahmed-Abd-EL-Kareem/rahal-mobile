@@ -1,11 +1,12 @@
+// app/hotel/[id].tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, TextInput, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, CardContent, Badge, Button } from '@/components/ui';
-import { useHotel, useHotelMeta } from '@/api/hooks/useHotels';
-import { formatCurrency } from '@/utils';
+import { useHotel } from '@/api/hooks/useHotels';
+import { formatCurrency } from '@/utils/currency';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useFavoritesStore } from '@/store/favoritesStore';
@@ -23,71 +24,53 @@ const MOCK_ROOM_IMAGES = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBIM8SwLyQLD3TRxX0metmn5DhxnVdXsjKoRBRAkrh1xt5-Ev4yQ7HFyAZObc1F65OKlbT0bBTkOx9xIG8RfTn2X2sCcbMaFCMfa5GGrz8gMJqbB14-QHzrAyR4kw6aUBb-m4zAMBG-gpVjhXVkjLfa3yjlsM1ob63NyPv-91rsfqalo6omeYWW-LEaRPigSj-mYXi36LYX0yn8yZ7uqJWG8F-neJ5GLFJ4QiLmzReZz890s8Xq4_EBiX0PoNE8oud632H2Jz6enPA',
 ];
 
-const FALLBACK_HOTEL = {
-  _id: 'fallback-gilded-oasis',
-  name: { en: 'The Gilded Oasis', ar: 'الواحة المذهبة' },
-  city: 'Luxor',
-  stars: 5,
-  currency: 'USD',
-  averagePricePerNight: 320,
-  coverImage: MOCK_GALLERY[0],
-  images: MOCK_GALLERY,
-  description: {
-    en: "Nestled on the tranquil banks of the Nile, The Gilded Oasis is more than a hotel; it is a portal to the past. Built upon the site of a forgotten nobleman’s estate, the architecture utilizes reclaimed limestone and hand-forged bronze. Every stay supports the local restoration projects.",
-    ar: "يقع فندق الواحة المذهبة على ضفاف النيل الهادئة، وهو أكثر من مجرد فندق؛ إنه بوابة إلى الماضي. بني على موقع عزبة رجل نبيل منسي، وتستخدم العمارة الحجر الجيري المستصلح والبرونز المشغول يدوياً."
-  },
-  rooms: [
-    { type: 'Nile Vista Suite', capacity: 2, pricePerNight: 320 },
-    { type: 'Temple Deluxe Twin', capacity: 3, pricePerNight: 210 }
-  ]
-};
+const DEFAULT_ROOMS = [
+  { type: 'Nile Vista Suite', capacity: 2, pricePerNight: 320, description: 'Panoramic river view with private balcony and marble bath' },
+  { type: 'Temple Deluxe Twin', capacity: 3, pricePerNight: 210, description: 'Spacious royal twin beds with artisan Egyptian cotton' },
+  { type: 'Royal Pharaoh Suite', capacity: 4, pricePerNight: 480, description: 'Ultra-luxury suite with dedicated butler and private sun deck' }
+];
 
 export default function HotelDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
 
-  const { data: hotel, isLoading, error } = useHotel(params.id);
-  const { data: meta } = useHotelMeta();
-
-  const h = (hotel && hotel.data) ? hotel.data : FALLBACK_HOTEL;
+  const { data: hotelResponse, isLoading, error } = useHotel(params.id || '');
+  const hotel = hotelResponse?.data;
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const carouselRef = useRef<ScrollView>(null);
+
+  const { favoriteHotels, toggleHotelFavorite } = useFavoritesStore();
+  const isFavorite = hotel ? favoriteHotels.some(item => item._id === hotel._id) : false;
+
+  // Real or fallback rooms
+  const roomsList = (hotel?.rooms && hotel.rooms.length > 0) ? hotel.rooms : DEFAULT_ROOMS;
 
   useEffect(() => {
-    if (h && h.rooms && h.rooms.length > 0 && !selectedRoom) {
-      setSelectedRoom(h.rooms[0]);
+    if (roomsList.length > 0 && !selectedRoom) {
+      setSelectedRoom(roomsList[0]);
     }
-  }, [h]);
-
-  const [checkIn, setCheckIn] = useState('2026-07-15');
-  const [checkOut, setCheckOut] = useState('2026-07-18');
-  const [guests, setGuests] = useState(2);
-  const [rooms, setRooms] = useState(1);
-  const [isBooking, setIsBooking] = useState(false);
-  const [specialRequests, setSpecialRequests] = useState('');
-  const { favoriteHotels, toggleHotelFavorite } = useFavoritesStore();
-  const isFavorite = favoriteHotels.some(item => item._id === h._id);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  const carouselRef = useRef<ScrollView>(null);
+  }, [roomsList]);
 
   const handleBook = () => {
     if (!selectedRoom) {
-      Alert.alert('Missing Info', 'Please select a sanctuary/room before booking');
+      Alert.alert(t('hotelDetail.selectRoom', 'Select Room'), t('hotelDetail.missingRoomAlert', 'Please select a sanctuary room before booking.'));
       return;
     }
+
     router.push({
       pathname: '/booking/flow',
       params: {
-        hotelId: h._id,
-        roomType: selectedRoom.type,
-        pricePerNight: selectedRoom.pricePerNight,
-        checkIn,
-        checkOut,
-        guests,
-        rooms,
+        hotelId: hotel?._id || params.id || '',
+        roomType: selectedRoom.type || selectedRoom.name || 'Sanctuary Suite',
+        pricePerNight: String(selectedRoom.pricePerNight || hotel?.averagePricePerNight || 320),
+        checkIn: '2026-09-01',
+        checkOut: '2026-09-04',
+        guests: String(selectedRoom.capacity || 2),
+        rooms: '1',
       }
     });
   };
@@ -107,13 +90,25 @@ export default function HotelDetailScreen() {
     );
   }
 
-  const currency = h.currency || 'EGP';
-  const gallery = h.images && h.images.length > 0 ? h.images : MOCK_GALLERY;
+  // Localized content
+  const hotelName = (hotel?.name && typeof hotel.name === 'object')
+    ? (hotel.name[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.name.en || '')
+    : (hotel?.name || 'Heritage Sanctuary Resort');
+
+  const hotelDescription = (hotel?.description && typeof hotel.description === 'object')
+    ? (hotel.description[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.description.en || '')
+    : (hotel?.description || (i18n.language === 'ar' 
+        ? 'يقع هذا الملاذ الفاخر على ضفاف النيل الساحرة، موفراً تجربة ضيافة ملكية تمزج بين عراقة التاريخ المصري وأحدث وسائل الراحة العالمية.' 
+        : 'Nestled on the tranquil banks of the Nile, this property is a portal to Egypt’s timeless legacy, combining historic architecture with modern world-class luxury.'));
+
+  const currency = hotel?.currency || 'EGP';
+  const gallery = (hotel?.images && hotel.images.length > 0) ? hotel.images : (hotel?.coverImage ? [hotel.coverImage, ...MOCK_GALLERY] : MOCK_GALLERY);
+  const ratingScore = (4.6 + ((hotel?.stars || 5) * 0.08)).toFixed(1);
 
   return (
     <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
       
-      {/* Top Header (offset below camera and notification area) */}
+      {/* Top Header */}
       <View 
         className="flex-row justify-between items-center px-4 border-b z-50"
         style={{
@@ -123,10 +118,17 @@ export default function HotelDetailScreen() {
           borderBottomColor: colors.outlineVariant + '33',
         }}
       >
-        <TouchableOpacity onPress={() => router.push('/(tabs)/hotel')} className="p-2 active:scale-90">
-          <Ionicons name="arrow-back" size={24} color={colors.onSurfaceVariant} />
+        <TouchableOpacity onPress={() => router.back()} className="p-2 active:scale-90">
+          <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color={colors.onSurfaceVariant} />
         </TouchableOpacity>
-        <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+        <View className="flex-row items-center gap-2">
+          <Image 
+            source={require('@/assets/logo-2.png')} 
+            style={{ width: 28, height: 28 }} 
+            resizeMode="contain" 
+          />
+          <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+        </View>
         <TouchableOpacity className="p-2 active:scale-90">
           <Ionicons name="share-outline" size={24} color={colors.onSurfaceVariant} />
         </TouchableOpacity>
@@ -166,13 +168,15 @@ export default function HotelDetailScreen() {
           </View>
 
           {/* Floating Favorite Button */}
-          <TouchableOpacity
-            onPress={() => toggleHotelFavorite(h as any)}
-            className="absolute top-6 right-6 w-12 h-12 rounded-full items-center justify-center shadow-lg active:scale-95"
-            style={{ backgroundColor: colors.surface + 'E6' }}
-          >
-            <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={24} color={isFavorite ? "#BA1A1A" : "#C8922A"} />
-          </TouchableOpacity>
+          {hotel && (
+            <TouchableOpacity
+              onPress={() => toggleHotelFavorite(hotel)}
+              className="absolute top-6 right-6 w-12 h-12 rounded-full items-center justify-center shadow-lg active:scale-95"
+              style={{ backgroundColor: isDark ? 'rgba(28, 26, 20, 0.85)' : 'rgba(255, 255, 255, 0.85)' }}
+            >
+              <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={24} color={isFavorite ? "#BA1A1A" : "#C8922A"} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View className="p-4 md:p-10 max-w-[1200px] mx-auto w-full">
@@ -180,20 +184,26 @@ export default function HotelDetailScreen() {
           {/* Basic Info */}
           <View className="flex-row justify-between items-start mb-6">
             <View className="flex-1 pr-4">
-              <Text className="text-display-lg-mobile font-headline mb-2" style={{ color: colors.onSurface }}>{h.name.en}</Text>
+              <Text className="text-display-lg-mobile font-headline mb-2 text-left" style={{ color: colors.onSurface }}>
+                {hotelName}
+              </Text>
               <View className="flex-row items-center gap-2 flex-wrap">
                 <View className="flex-row items-center gap-1">
                   <Ionicons name="star" size={16} color="#C8922A" />
                   <Text className="font-semibold text-label-md" style={{ color: colors.onSurface }}>
-                    {(4.5 + (h.stars * 0.08)).toFixed(1)} (1,240 Reviews)
+                    {ratingScore} ({hotel?.stars || 5}★)
                   </Text>
                 </View>
                 <Text className="font-medium" style={{ color: colors.onSurfaceVariant }}>•</Text>
-                <Text className="font-body text-body-md" style={{ color: colors.onSurfaceVariant }}>{h.city}, Egypt</Text>
+                <Text className="font-body text-body-md" style={{ color: colors.onSurfaceVariant }}>
+                  {hotel?.city || 'Egypt'}, Egypt
+                </Text>
               </View>
             </View>
             <Badge variant="gold" className="px-3 py-1 rounded-full border border-pharaoh-gold/20">
-              <Text className="text-pharaoh-gold text-label-sm font-semibold tracking-wider uppercase">PREMIUM</Text>
+              <Text className="text-pharaoh-gold text-label-sm font-semibold tracking-wider uppercase">
+                {t('hotelListing.rahalChoice', 'PREMIUM')}
+              </Text>
             </Badge>
           </View>
 
@@ -207,30 +217,36 @@ export default function HotelDetailScreen() {
             </View>
             <View className="flex-row items-center gap-2 mb-3">
               <Ionicons name="sparkles" size={18} color="#C8922A" />
-              <Text className="text-pharaoh-gold text-label-sm font-bold uppercase tracking-widest">AI Insight & Fit</Text>
+              <Text className="text-pharaoh-gold text-label-sm font-bold uppercase tracking-widest">
+                {t('hotelDetail.aiInsight', 'AI Insight & Match')}
+              </Text>
             </View>
-            <Text className="font-body text-body-md leading-relaxed" style={{ color: colors.onSurfaceVariant }}>
-              Based on your interest in <Text className="text-pharaoh-gold font-bold">Archaeological Heritage</Text> and <Text className="text-pharaoh-gold font-bold">Wellness</Text>, this hotel is a 98% match. Guests love the private sunrise boat tours and the world-class Nile-view spa facilities.
+            <Text className="font-body text-body-md leading-relaxed text-left" style={{ color: colors.onSurfaceVariant }}>
+              {t('hotelDetail.aiInsightDesc', 'Curated by Rahal AI based on verified guest reviews, exquisite Nile vistas, and authentic heritage hospitality.')}
             </Text>
           </View>
 
           {/* About Section */}
           <View className="mb-8">
-            <Text className="font-headline text-headline-md-mobile mb-3" style={{ color: colors.onSurface }}>About the Heritage</Text>
-            <Text className="font-body text-body-md leading-relaxed" style={{ color: colors.onSurfaceVariant }}>
-              {h.description?.[t('common.locale') === 'ar' ? 'ar' : 'en'] || 
-               "Nestled on the tranquil banks of the Nile, this property is more than a hotel; it is a portal to the past. Built upon the site of a forgotten nobleman’s estate, the architecture utilizes reclaimed limestone and hand-forged bronze. Every stay supports the local restoration projects."}
+            <Text className="font-headline text-headline-md-mobile mb-3 text-left" style={{ color: colors.onSurface }}>
+              {t('hotelDetail.about', 'About the Sanctuary')}
+            </Text>
+            <Text className="font-body text-body-md leading-relaxed text-left" style={{ color: colors.onSurfaceVariant }}>
+              {hotelDescription}
             </Text>
           </View>
 
           {/* Amenities Grid */}
           <View className="mb-8">
+            <Text className="font-headline text-headline-md-mobile mb-4 text-left" style={{ color: colors.onSurface }}>
+              {t('hotelDetail.amenities', 'Featured Amenities')}
+            </Text>
             <View className="flex-row flex-wrap gap-3">
               {[
-                { name: 'Infinity Pool', icon: 'water-outline' },
-                { name: 'Holistic Spa', icon: 'leaf-outline' },
-                { name: 'Artisan Dining', icon: 'restaurant-outline' },
-                { name: 'Nile Access', icon: 'boat-outline' }
+                { name: t('hotelDetail.amenityPool', 'Infinity Pool'), icon: 'water-outline' },
+                { name: t('hotelDetail.amenitySpa', 'Holistic Spa'), icon: 'leaf-outline' },
+                { name: t('hotelDetail.amenityDining', 'Artisan Dining'), icon: 'restaurant-outline' },
+                { name: t('hotelDetail.amenityNile', 'Nile Access'), icon: 'boat-outline' }
               ].map((amenity, idx) => (
                 <View
                   key={idx}
@@ -238,32 +254,42 @@ export default function HotelDetailScreen() {
                   style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant + '33' }}
                 >
                   <Ionicons name={amenity.icon as any} size={24} color="#C8922A" />
-                  <Text className="font-semibold text-label-sm mt-1" style={{ color: colors.onSurface }}>{amenity.name}</Text>
+                  <Text className="font-semibold text-label-sm mt-1" style={{ color: colors.onSurface }}>
+                    {amenity.name}
+                  </Text>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Sanctuary Selection */}
+          {/* Sanctuary / Room Selection */}
           <View className="mb-8">
             <View className="flex-row justify-between items-end mb-4">
-              <Text className="font-headline text-headline-md-mobile" style={{ color: colors.onSurface }}>Select Sanctuary</Text>
-              <TouchableOpacity>
-                <Text className="text-pharaoh-gold font-semibold text-label-md">View All</Text>
-              </TouchableOpacity>
+              <Text className="font-headline text-headline-md-mobile text-left" style={{ color: colors.onSurface }}>
+                {t('hotelDetail.roomTypes', 'Select Sanctuary Room')}
+              </Text>
+              <Text className="text-pharaoh-gold font-semibold text-label-sm">
+                {roomsList.length} {t('hotelDetail.available', 'Available')}
+              </Text>
             </View>
 
             <View className="flex-col gap-4">
-              {h.rooms?.map((room, idx) => {
-                const isSelected = selectedRoom?.type === room.type;
-                const roomImage = MOCK_ROOM_IMAGES[idx % MOCK_ROOM_IMAGES.length];
+              {roomsList.map((room: any, idx: number) => {
+                const roomName = room.type || room.name || `Sanctuary Room ${idx + 1}`;
+                const isSelected = selectedRoom?.type === room.type || selectedRoom?.name === room.name;
+                const roomImage = (room.images && room.images[0]) || MOCK_ROOM_IMAGES[idx % MOCK_ROOM_IMAGES.length];
+                const price = room.pricePerNight || hotel?.averagePricePerNight || 320;
                 
                 return (
                   <TouchableOpacity
                     key={idx}
+                    activeOpacity={0.85}
                     onPress={() => setSelectedRoom(room)}
-                    className="flex-row p-4 border rounded-xl overflow-hidden"
-                    style={{ backgroundColor: isSelected ? colors.primary + '14' : colors.surface, borderColor: isSelected ? colors.primary : colors.outlineVariant + '48' }}
+                    className="flex-row p-4 border rounded-xl overflow-hidden active:scale-[0.99]"
+                    style={{ 
+                      backgroundColor: isSelected ? (isDark ? '#2C2314' : '#FDF9F0') : colors.surface, 
+                      borderColor: isSelected ? colors.primary : colors.outlineVariant + '48' 
+                    }}
                   >
                     <Image
                       source={{ uri: roomImage }}
@@ -273,11 +299,15 @@ export default function HotelDetailScreen() {
                     />
                     <View className="flex-1 pl-4 justify-between">
                       <View>
-                        <Text className="font-headline text-headline-md-mobile mb-1" style={{ color: colors.primary }}>{room.type}</Text>
+                        <Text className="font-headline text-headline-md-mobile mb-1 text-left" style={{ color: isSelected ? colors.primary : colors.onSurface }}>
+                          {roomName}
+                        </Text>
                         <View className="flex-row items-center gap-3 text-sm mt-1">
                           <View className="flex-row items-center gap-1">
                             <Ionicons name="person-outline" size={14} color={colors.onSurfaceVariant} />
-                            <Text className="text-xs font-label" style={{ color: colors.outline }}>{room.capacity} Guests</Text>
+                            <Text className="text-xs font-label" style={{ color: colors.outline }}>
+                              {room.capacity || 2} {t('hotelDetail.guests', 'Guests')}
+                            </Text>
                           </View>
                           <View className="flex-row items-center gap-1">
                             <Ionicons name="bed-outline" size={14} color={colors.onSurfaceVariant} />
@@ -287,11 +317,13 @@ export default function HotelDetailScreen() {
                       </View>
                       
                       <View className="flex-row justify-between items-end mt-2">
-                        <Text className="text-xs line-through" style={{ color: colors.outline }}>{formatCurrency(room.pricePerNight * 1.3, currency)}</Text>
+                        <Text className="text-xs line-through" style={{ color: colors.outline }}>
+                          {formatCurrency(price * 1.25, currency)}
+                        </Text>
                         <View className="items-end">
                           <Text className="font-semibold text-label-md" style={{ color: colors.primary }}>
-                            {formatCurrency(room.pricePerNight, currency)}
-                            <Text className="text-xs font-normal" style={{ color: colors.onSurfaceVariant }}>/night</Text>
+                            {formatCurrency(price, currency)}
+                            <Text className="text-xs font-normal" style={{ color: colors.onSurfaceVariant }}> / {t('hotelListing.perNight', 'night')}</Text>
                           </Text>
                         </View>
                       </View>
@@ -302,11 +334,13 @@ export default function HotelDetailScreen() {
             </View>
           </View>
 
-          {/* Map Section */}
+          {/* Location Map View */}
           <View className="mb-8">
-            <Text className="font-headline text-headline-md-mobile mb-4" style={{ color: colors.onSurface }}>Location & Access</Text>
+            <Text className="font-headline text-headline-md-mobile mb-4 text-left" style={{ color: colors.onSurface }}>
+              {t('hotelDetail.location', 'Location & Sanctuary Access')}
+            </Text>
             <View 
-              className="relative w-full h-[220px] rounded-2xl overflow-hidden border shadow-sm"
+              className="relative w-full h-[200px] rounded-2xl overflow-hidden border shadow-sm"
               style={{ borderColor: colors.outlineVariant + '4D' }}
             >
               <Image
@@ -315,89 +349,57 @@ export default function HotelDetailScreen() {
                 resizeMode="cover"
               />
               <View 
-                className="absolute bottom-4 left-4 right-4 flex-row justify-between items-center px-3 py-2.5 rounded-xl border shadow-sm"
-                style={{ backgroundColor: colors.surface + 'E6', borderColor: colors.outlineVariant + '33' }}
+                className="absolute bottom-3 left-3 right-3 flex-row justify-between items-center px-3.5 py-2.5 rounded-xl border shadow-sm"
+                style={{ backgroundColor: colors.surface + 'F2', borderColor: colors.outlineVariant + '33' }}
               >
                 <View className="flex-row items-center gap-2">
                   <Ionicons name="location" size={18} color="#C8922A" />
-                  <Text className="font-semibold text-on-surface text-label-sm" style={{ color: colors.onSurface }}>{h.city || 'West Bank'}, Luxor</Text>
+                  <Text className="font-semibold text-label-sm" style={{ color: colors.onSurface }}>
+                    {hotel?.city || 'Egypt'}, Egypt
+                  </Text>
                 </View>
-                <TouchableOpacity className="bg-pharaoh-gold w-10 h-10 rounded-full items-center justify-center shadow-md active:scale-90">
-                  <Ionicons name="navigate" size={16} color="white" />
-                </TouchableOpacity>
+                <View className="bg-pharaoh-gold px-3 py-1.5 rounded-full">
+                  <Text className="text-white font-bold text-xs">
+                    {t('hotelDetail.openMap', 'Nile View')}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
-
-          {/* Price Calculation details card */}
-          {selectedRoom && (
-            <Card 
-              className="mb-8 border rounded-xl p-5 shadow-sm"
-              style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-            >
-              <CardContent className="p-0">
-                <Text className="font-headline text-headline-md-mobile mb-4" style={{ color: colors.onSurface }}>Invoice Detail</Text>
-                
-                <View className="flex-col gap-3">
-                  <View className="flex-row justify-between">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>{selectedRoom.type} × 3 nights</Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>{formatCurrency(selectedRoom.pricePerNight * rooms * 3, currency)}</Text>
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>Rahal Service Fee</Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>{formatCurrency(selectedRoom.pricePerNight * rooms * 3 * 0.12, currency)}</Text>
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>Taxes & Tourist Surcharges</Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>{formatCurrency(selectedRoom.pricePerNight * rooms * 3 * 0.14, currency)}</Text>
-                  </View>
-                  <View className="h-[1px] my-2" style={{ backgroundColor: colors.outlineVariant + '33' }} />
-                  <View className="flex-row justify-between items-center">
-                    <Text className="font-headline text-headline-md-mobile" style={{ color: colors.onSurface }}>Total Payment</Text>
-                    <Text className="font-headline text-headline-md-mobile text-pharaoh-gold" style={{ color: colors.pharaohGold }}>
-                      {formatCurrency(selectedRoom.pricePerNight * rooms * 3 * 1.26, currency)}
-                    </Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-          )}
 
         </View>
       </ScrollView>
 
       {/* Sticky Bottom Booking Bar */}
       <View 
-        className="absolute bottom-0 left-0 right-0 h-20 border-t px-4 flex-row justify-between items-center shadow-lg z-50"
+        className="absolute bottom-0 left-0 right-0 h-20 border-t px-5 flex-row justify-between items-center shadow-2xl z-50"
         style={{ backgroundColor: colors.surface, borderTopColor: colors.outlineVariant + '33' }}
       >
         <View>
           <View className="flex-row items-baseline gap-1">
             <Text className="font-headline text-headline-md text-pharaoh-gold" style={{ color: colors.pharaohGold }}>
-              {selectedRoom ? formatCurrency(selectedRoom.pricePerNight, currency) : formatCurrency(h.averagePricePerNight, currency)}
+              {selectedRoom 
+                ? formatCurrency(selectedRoom.pricePerNight || hotel?.averagePricePerNight || 320, currency) 
+                : formatCurrency(hotel?.averagePricePerNight || 320, currency)}
             </Text>
-            <Text className="text-xs font-body" style={{ color: colors.onSurfaceVariant }}>/night</Text>
+            <Text className="text-xs font-body" style={{ color: colors.onSurfaceVariant }}>/ {t('hotelListing.perNight', 'night')}</Text>
           </View>
-          <TouchableOpacity>
-            <Text className="text-xs underline font-body" style={{ color: colors.secondary }}>View price details</Text>
-          </TouchableOpacity>
+          <Text className="text-xs font-body" style={{ color: colors.outline }}>
+            {selectedRoom?.type || selectedRoom?.name || t('hotelDetail.roomTypes', 'Selected Sanctuary')}
+          </Text>
         </View>
 
-        <Button
+        <TouchableOpacity
           onPress={handleBook}
-          disabled={isBooking || !selectedRoom}
-          className="bg-pharaoh-gold px-8 py-3 rounded-full flex-row items-center gap-2 active:scale-95 shadow-md"
+          disabled={!selectedRoom}
+          className="bg-pharaoh-gold px-8 py-3.5 rounded-full flex-row items-center gap-2 active:scale-95 shadow-lg"
           style={{ elevation: 4 }}
         >
-          {isBooking ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <>
-              <Text className="text-white text-label-md font-bold uppercase tracking-wider">Book Now</Text>
-              <Ionicons name="calendar-outline" size={16} color="white" />
-            </>
-          )}
-        </Button>
+          <Text className="text-white text-label-md font-bold uppercase tracking-wider">
+            {t('hotelDetail.bookNow', 'Book Now')}
+          </Text>
+          <Ionicons name={isRTL ? "arrow-back" : "calendar-outline"} size={16} color="white" />
+        </TouchableOpacity>
       </View>
     </View>
   );

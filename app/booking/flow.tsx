@@ -37,27 +37,34 @@ export default function BookingFlowScreen() {
   const [createdBookingId, setCreatedBookingId] = useState('');
 
   // Fetch real hotel details from backend
-  const { data: hotelResponse, isLoading } = useHotel(params.hotelId || '');
+  const { data: hotelResponse, isLoading, error } = useHotel(params.hotelId || '');
   const hotel = hotelResponse?.data;
   const createBooking = useCreateBooking();
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
   useEffect(() => {
-    if (hotel?.rooms) {
-      const room = hotel.rooms.find((r: any) => r.type === params.roomType) || hotel.rooms[0];
+    if (hotel?.rooms && hotel.rooms.length > 0) {
+      const room = hotel.rooms.find((r: any) => r.type === params.roomType || r.name === params.roomType) || hotel.rooms[0];
       setSelectedRoom(room);
-    } else if (params.roomType) {
+    } else if (params.roomType || params.pricePerNight) {
       setSelectedRoom({
-        type: params.roomType,
+        type: params.roomType || 'Sanctuary Deluxe Room',
         pricePerNight: params.pricePerNight ? parseFloat(params.pricePerNight) : 320,
+        capacity: params.guests ? parseInt(params.guests) : 2
+      });
+    } else if (!isLoading) {
+      // Fallback default room if no params or hotel rooms
+      setSelectedRoom({
+        type: 'Sanctuary Suite',
+        pricePerNight: 320,
         capacity: 2
       });
     }
-  }, [hotel, params.roomType]);
+  }, [hotel, params.roomType, params.pricePerNight, isLoading]);
 
   const totalNights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24))) || 3;
-  const roomPrice = selectedRoom?.pricePerNight || 320;
+  const roomPrice = selectedRoom?.pricePerNight || (hotel?.averagePricePerNight || 320);
   const subtotal = roomPrice * rooms * totalNights;
   const aiDiscount = subtotal * 0.10;
   const taxesAndFees = subtotal * 0.14;
@@ -66,7 +73,7 @@ export default function BookingFlowScreen() {
   const handleNext = () => {
     if (currentStep === 0) {
       if (!checkIn || !checkOut) {
-        Alert.alert('Missing Info', 'Please specify check-in and check-out dates.');
+        Alert.alert(t('common.missingInfo', 'Missing Info'), t('hotelDetail.specifyDates', 'Please specify check-in and check-out dates.'));
         return;
       }
     }
@@ -81,7 +88,7 @@ export default function BookingFlowScreen() {
 
   const handleBooking = async () => {
     if (!isAgreed) {
-      Alert.alert('Agreement Required', 'Please agree to the Heritage Terms of Service to complete your booking.');
+      Alert.alert(t('bookings.agreementRequired', 'Agreement Required'), t('bookings.termsNotice', 'Please agree to the Heritage Terms of Service to complete your booking.'));
       return;
     }
 
@@ -102,16 +109,22 @@ export default function BookingFlowScreen() {
         throw new Error('No reservation details returned from backend.');
       }
     } catch (error: any) {
-      Alert.alert('Booking Failed', error.response?.data?.message || 'Failed to complete your reservation. Please try again.');
+      Alert.alert(t('bookings.bookingFailed', 'Booking Failed'), error.response?.data?.message || 'Failed to complete your reservation. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (isLoading || !selectedRoom) {
+  if (isLoading && !hotel && !selectedRoom) {
     return (
-      <View className="flex-1 bg-background justify-center items-center" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1 bg-background justify-center items-center px-6" style={{ backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color="#C8922A" />
+        <Text className="text-sm font-medium mt-4" style={{ color: colors.onSurfaceVariant }}>
+          {t('common.loading', 'Loading Sanctuary Details...')}
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} className="mt-6 px-6 py-2 rounded-full border border-pharaoh-gold">
+          <Text className="text-pharaoh-gold text-xs font-bold">{t('common.cancel', 'Cancel')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
