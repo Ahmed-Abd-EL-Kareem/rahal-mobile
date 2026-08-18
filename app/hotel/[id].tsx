@@ -91,15 +91,19 @@ export default function HotelDetailScreen() {
   }
 
   // Localized content
-  const hotelName = (hotel?.name && typeof hotel.name === 'object')
-    ? (hotel.name[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.name.en || '')
-    : (hotel?.name || 'Heritage Sanctuary Resort');
+  const hotelName: string = hotel?.name
+    ? (typeof hotel.name === 'object' 
+        ? (hotel.name[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.name.en || '') 
+        : String(hotel.name))
+    : 'Heritage Sanctuary Resort';
 
-  const hotelDescription = (hotel?.description && typeof hotel.description === 'object')
-    ? (hotel.description[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.description.en || '')
-    : (hotel?.description || (i18n.language === 'ar' 
+  const hotelDescription: string = hotel?.description
+    ? (typeof hotel.description === 'object'
+        ? (hotel.description[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.description.en || '')
+        : String(hotel.description))
+    : (i18n.language === 'ar' 
         ? 'يقع هذا الملاذ الفاخر على ضفاف النيل الساحرة، موفراً تجربة ضيافة ملكية تمزج بين عراقة التاريخ المصري وأحدث وسائل الراحة العالمية.' 
-        : 'Nestled on the tranquil banks of the Nile, this property is a portal to Egypt’s timeless legacy, combining historic architecture with modern world-class luxury.'));
+        : 'Nestled on the tranquil banks of the Nile, this property is a portal to Egypt’s timeless legacy, combining historic architecture with modern world-class luxury.');
 
   const currency = hotel?.currency || 'EGP';
   const gallery = (hotel?.images && hotel.images.length > 0) ? hotel.images : (hotel?.coverImage ? [hotel.coverImage, ...MOCK_GALLERY] : MOCK_GALLERY);

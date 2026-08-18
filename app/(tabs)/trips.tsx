@@ -18,7 +18,7 @@ export default function TripsScreen() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { showToast } = useUIStore();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
 
   const [activeTab, setActiveTab] = useState<'trips' | 'bookings'>('trips');
   const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -20,7 +20,7 @@ const CITIES = [
 
 export default function HotelsScreen() {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState('');
