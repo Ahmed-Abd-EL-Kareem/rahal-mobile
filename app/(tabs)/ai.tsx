@@ -1,5 +1,5 @@
 // app/(tabs)/ai.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ScrollView, 
   View, 
@@ -10,15 +10,15 @@ import {
   Platform, 
   ActivityIndicator, 
   Image, 
-  StatusBar,
   Modal,
-  Keyboard
+  Keyboard,
+  StatusBar
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAIChat } from '@/hooks/useAIChat';
+import { useAIChat, BackendConversationItem } from '@/hooks/useAIChat';
 import { useAISessionStore, ChatSession } from '@/store/aiSessionStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Badge } from '@/components/ui/Badge';
@@ -41,21 +41,24 @@ export default function AIScreen() {
     currentChatId, 
     createSession, 
     setCurrentSession, 
-    deleteSession 
+    deleteSession,
+    fetchBackendHistory,
+    loadBackendSession
   } = useAIChat();
   
   const chatSessionsMap = useAISessionStore((state) => state.chatSessions);
   const [input, setInput] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [backendHistory, setBackendHistory] = useState<BackendConversationItem[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
   const isRTL = i18n.language === 'ar';
-  const sessionsList: ChatSession[] = Array.from(chatSessionsMap.values()).sort(
+  const localSessions: ChatSession[] = Array.from(chatSessionsMap.values()).sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
-
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -68,8 +71,8 @@ export default function AIScreen() {
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates?.height || 0);
+      () => {
+        setIsKeyboardOpen(true);
         setTimeout(() => {
           scrollRef.current?.scrollToEnd({ animated: true });
         }, 80);
@@ -78,7 +81,7 @@ export default function AIScreen() {
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
-        setKeyboardHeight(0);
+        setIsKeyboardOpen(false);
       }
     );
     return () => {
@@ -86,6 +89,21 @@ export default function AIScreen() {
       hideSub.remove();
     };
   }, []);
+
+  const handleOpenHistory = async () => {
+    setIsHistoryOpen(true);
+    setIsHistoryLoading(true);
+    try {
+      const history = await fetchBackendHistory();
+      if (history && history.length > 0) {
+        setBackendHistory(history);
+      }
+    } catch (err) {
+      console.log('Error fetching history:', err);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -107,9 +125,14 @@ export default function AIScreen() {
     setIsHistoryOpen(false);
   };
 
-  const handleSelectSession = (sessionId: string) => {
-    setCurrentSession(sessionId);
+  const handleSelectSession = async (sessionId: string) => {
     setIsHistoryOpen(false);
+    await loadBackendSession(sessionId);
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    await deleteSession(sessionId);
+    setBackendHistory(prev => prev.filter(item => item.sessionId !== sessionId));
   };
 
   const formatTime = (date: any) => {
@@ -165,159 +188,27 @@ export default function AIScreen() {
     });
   };
 
-  // Render bento-style itinerary table
-  const renderTable = (tableData: { headers: string[]; rows: string[][] }, key: string) => {
+  // Render formatted message content
+  const renderFormattedContent = (content: string) => {
+    if (!content) return null;
     return (
-      <View key={key} style={{ backgroundColor: colors.surfaceBright, borderColor: colors.outlineVariant + '33' }} className="my-3 border rounded-xl overflow-hidden shadow-sm">
-        {/* Table Header */}
-        <View className="bg-pharaoh-gold/5 px-4 py-2.5 border-b border-pharaoh-gold/20 flex-row justify-between items-center">
-          <Text className="font-bold text-xs text-pharaoh-gold uppercase tracking-widest">
-            {tableData.headers[0] || 'Day'} Plan
-          </Text>
-          <Ionicons name="sparkles" size={14} color="#C8922A" />
-        </View>
-        
-        {/* Table Body */}
-        <View style={{ backgroundColor: colors.surfaceContainerLowest }} className="p-2">
-          {/* Header Column Labels */}
-          <View className="flex-row border-b border-outline-variant/20 pb-1.5 mb-1 px-1">
-            {tableData.headers.map((h, idx) => (
-              <Text 
-                key={idx} 
-                className={`text-[10px] font-bold text-outline dark:text-dark-outline uppercase tracking-wider ${
-                  idx === 0 ? 'w-10' : idx === 1 ? 'w-24' : 'flex-1'
-                }`}
-              >
-                {h}
-              </Text>
-            ))}
-          </View>
-          
-          {/* Table Rows */}
-          {tableData.rows.map((row, rowIdx) => (
-            <View 
-              key={rowIdx} 
-              className={`flex-row py-2.5 px-1 items-center ${
-                rowIdx !== tableData.rows.length - 1 ? 'border-b border-outline-variant/10' : ''
-              }`}
-            >
-              {row.map((col, colIdx) => {
-                if (colIdx === 0) {
-                  return (
-                    <Text key={colIdx} style={{ color: colors.secondary }} className="w-10 font-bold text-sm">
-                      {col}
-                    </Text>
-                  );
-                } else if (colIdx === 1) {
-                  return (
-                    <Text key={colIdx} className="w-24 text-on-surface dark:text-dark-on-surface text-sm font-semibold">
-                      {col}
-                    </Text>
-                  );
-                } else {
-                  return (
-                    <Text key={colIdx} className="flex-1 text-on-surface dark:text-dark-on-surface text-sm italic font-normal text-on-surface/90">
-                      {col}
-                    </Text>
-                  );
-                }
-              })}
-            </View>
-          ))}
-        </View>
+      <View className="flex-col gap-1.5">
+        <Text className="font-body-md text-on-surface dark:text-dark-on-surface text-[14px] leading-relaxed text-left">
+          {parseMarkdownText(content)}
+        </Text>
       </View>
     );
   };
 
-  // Render entire structured response content
-  const renderFormattedContent = (content: string) => {
-    if (!content) return null;
-    const lines = content.split('\n');
-    const renderedElements: React.ReactNode[] = [];
-    let currentTable: { headers: string[]; rows: string[][] } | null = null;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      // Check for markdown table row
-      if (line.startsWith('|')) {
-        const cols = line.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-        
-        // Separator row (e.g. |---|---|)
-        if (cols.every(col => col.startsWith('-') || col === '')) {
-          continue;
-        }
-        
-        if (!currentTable) {
-          currentTable = { headers: cols, rows: [] };
-        } else {
-          currentTable.rows.push(cols);
-        }
-        continue;
-      } else {
-        // Render accumulated table if table block has ended
-        if (currentTable) {
-          renderedElements.push(renderTable(currentTable, `table-${i}`));
-          currentTable = null;
-        }
-      }
-      
-      // Bullet list item
-      if (line.startsWith('-') || line.startsWith('*')) {
-        const bulletText = line.replace(/^[-*]\s*/, '');
-        renderedElements.push(
-          <View key={`bullet-${i}`} className="flex-row items-start pl-2 py-0.5">
-            <Text className="text-pharaoh-gold mr-2 font-bold text-sm">•</Text>
-            <Text className="flex-1 text-on-surface dark:text-dark-on-surface font-body-md text-sm leading-relaxed">
-              {parseMarkdownText(bulletText)}
-            </Text>
-          </View>
-        );
-        continue;
-      }
-      
-      // Standard paragraph
-      if (line.length > 0) {
-        renderedElements.push(
-          <Text key={`p-${i}`} className="text-on-surface dark:text-dark-on-surface font-body-md text-sm leading-relaxed mb-2">
-            {parseMarkdownText(line)}
-          </Text>
-        );
-      } else {
-        // Spacing block
-        renderedElements.push(<View key={`space-${i}`} className="h-1.5" />);
-      }
-    }
-    
-    // Catch remaining table if at the end of text
-    if (currentTable) {
-      renderedElements.push(renderTable(currentTable, `table-last`));
-    }
-    
-    return <View className="flex-col gap-1">{renderedElements}</View>;
-  };
-
   return (
     <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Ambient Atmospheric Glows */}
-      <View 
-        pointerEvents="none" 
-        className="absolute top-[15%] right-[-10%] w-[260px] h-[260px] bg-pharaoh-gold/5 rounded-full z-0" 
-        style={{ transform: [{ scale: 1.2 }] }}
-      />
-      <View 
-        pointerEvents="none" 
-        className="absolute bottom-[20%] left-[-15%] w-[220px] h-[220px] bg-nile-blue/5 rounded-full z-0"
-        style={{ transform: [{ scale: 1.2 }] }}
-      />
-
-      {/* Sticky Glassmorphic Header */}
+      {/* Sticky Header */}
       <View 
         style={{ 
           paddingTop: insets.top + 6,
-          backgroundColor: isDark ? 'rgba(20, 16, 8, 0.92)' : 'rgba(252, 249, 244, 0.92)'
+          backgroundColor: isDark ? 'rgba(20, 16, 8, 0.95)' : 'rgba(252, 249, 244, 0.95)'
         }} 
         className="flex-row items-center px-4 pb-3 border-b border-outline-variant/15 shadow-sm z-50"
       >
@@ -325,7 +216,7 @@ export default function AIScreen() {
           onPress={() => router.back()} 
           className="w-10 h-10 items-center justify-center rounded-full active:scale-90"
         >
-          <Ionicons name="arrow-back" size={24} color={isDark ? '#E8E4DD' : '#1C1C19'} />
+          <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color={isDark ? '#E8E4DD' : '#1C1C19'} />
         </TouchableOpacity>
         
         {/* Concierge Profile Identity */}
@@ -340,20 +231,20 @@ export default function AIScreen() {
             <View className="absolute bottom-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-background" />
           </View>
           <View>
-            <Text className="font-headline text-on-surface text-base leading-tight">
+            <Text className="font-headline text-on-surface text-base leading-tight text-left">
               {t('common.nav.planner')}
             </Text>
-            <Text className="text-[9px] uppercase tracking-widest text-pharaoh-gold font-bold">
+            <Text className="text-[9px] uppercase tracking-widest text-pharaoh-gold font-bold text-left">
               Heritage Concierge
             </Text>
           </View>
         </View>
 
         {/* Header Options */}
-        <View className="flex-row gap-1">
-          {/* View History Button */}
+        <View className="flex-row gap-1.5">
+          {/* View History Button (Uses Backend Route) */}
           <TouchableOpacity 
-            onPress={() => setIsHistoryOpen(true)}
+            onPress={handleOpenHistory}
             className="w-9 h-9 items-center justify-center rounded-full active:scale-90 bg-pharaoh-gold/10"
           >
             <Ionicons name="time-outline" size={20} color="#C8922A" />
@@ -368,12 +259,11 @@ export default function AIScreen() {
         </View>
       </View>
 
-      {/* Chat & Keyboard Canvas (WhatsApp-style dynamic elevation) */}
+      {/* Chat & Keyboard Canvas */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
         style={{ flex: 1 }}
-        className="flex-1"
       >
         {/* Chat Conversation Canvas */}
         <ScrollView
@@ -394,7 +284,7 @@ export default function AIScreen() {
           {messages.length === 0 ? (
             <View className="flex-col items-start max-w-[85%] mb-4">
               <View className="bg-surface-container-low dark:bg-sand-dark p-4 rounded-2xl rounded-tl-none shadow-sm border border-outline-variant/35 dark:border-outline-variant/10">
-                <Text className="font-body-md text-on-surface dark:text-dark-on-surface text-sm leading-relaxed">
+                <Text className="font-body-md text-on-surface dark:text-dark-on-surface text-sm leading-relaxed text-left">
                   {i18n.language === 'ar' 
                     ? 'مرحباً! أنا كونسيرج رحال الذكي. كيف يمكنني مساعدتك في نسج رحلتك عبر عجائب مصر الخالدة اليوم؟' 
                     : 'Marhaban! I am your Rahal AI Concierge. How may I help you weave your journey through the timeless wonders of Egypt today?'}
@@ -421,7 +311,7 @@ export default function AIScreen() {
                       }`}
                     >
                       {isUser ? (
-                        <Text className="font-body-md text-white text-[14.5px] leading-relaxed">
+                        <Text className="font-body-md text-white text-[14.5px] leading-relaxed text-left">
                           {msg.content}
                         </Text>
                       ) : (
@@ -461,29 +351,29 @@ export default function AIScreen() {
         {/* Bottom Interaction Area */}
         <View 
           style={{ 
-            paddingBottom: keyboardHeight > 0 ? (Platform.OS === 'android' ? 8 : 10) : Math.max(insets.bottom, 12),
+            paddingBottom: isKeyboardOpen ? (Platform.OS === 'android' ? 6 : 8) : Math.max(insets.bottom, 12),
             backgroundColor: colors.background + 'F2',
             borderTopColor: colors.outlineVariant + '1A',
           }} 
-          className="px-4 pt-3 border-t z-40"
+          className="px-4 pt-2.5 border-t z-40"
         >
           {/* Suggestion Chips (only when keyboard is closed) */}
-          {keyboardHeight === 0 && (
+          {!isKeyboardOpen && (
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false} 
               contentContainerStyle={{ paddingHorizontal: 2, gap: 10 }}
-              className="pb-3"
+              className="pb-2.5"
             >
               {SUGGESTIONS.map((s) => (
                 <TouchableOpacity
                   key={s.key}
                   onPress={() => handleSuggestion(s.key)}
                   style={{ backgroundColor: colors['surface-container-low'], borderColor: colors.primary + '40' }}
-                  className="border rounded-full px-4 py-2 flex-row items-center active:scale-95 shadow-sm"
+                  className="border rounded-full px-4 py-1.5 flex-row items-center active:scale-95 shadow-sm"
                 >
                   <View className="mr-1.5">
-                    <Ionicons name={s.icon as any} size={15} color="#C8922A" />
+                    <Ionicons name={s.icon as any} size={14} color="#C8922A" />
                   </View>
                   <Text className="text-pharaoh-gold font-bold text-xs tracking-wide">
                     {t(`home.chatbot.${s.key}`)}
@@ -516,7 +406,7 @@ export default function AIScreen() {
               }}
               placeholder={t('home.chatbot.mockPlaceholder')}
               placeholderTextColor={isDark ? '#9C8F7C' : '#A99F92'}
-              className="flex-1 px-3 text-on-surface dark:text-dark-on-surface font-body-md text-sm py-1 min-h-[36px] max-h-[90px]"
+              className="flex-1 px-3 text-on-surface dark:text-dark-on-surface font-body-md text-sm py-1 min-h-[36px] max-h-[90px] text-left"
               style={{ color: colors.onSurface }}
               multiline
               onSubmitEditing={handleSend}
@@ -533,19 +423,21 @@ export default function AIScreen() {
             </View>
           </View>
 
-          {/* AI Oracle Credits Tracker */}
-          <View className="flex-row justify-center items-center gap-2 mt-2.5">
-            <Badge variant="sparkle" size="sm">
-              {t('home.chatbot.creditsTitle')}
-            </Badge>
-            <Text className="text-[10px] text-outline">
-              {t('home.chatbot.creditsReset')}
-            </Text>
-          </View>
+          {/* AI Credits Info (hidden when typing) */}
+          {!isKeyboardOpen && (
+            <View className="flex-row justify-center items-center gap-2 mt-2">
+              <Badge variant="sparkle" size="sm">
+                {t('home.chatbot.creditsTitle')}
+              </Badge>
+              <Text className="text-[10px] text-outline">
+                {t('home.chatbot.creditsReset')}
+              </Text>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
 
-      {/* Chat History Slide-Up Modal */}
+      {/* Chat History Slide-Up Modal (Powered by Backend GET /api/v1/ai/chat) */}
       <Modal
         visible={isHistoryOpen}
         animationType="slide"
@@ -598,71 +490,87 @@ export default function AIScreen() {
             </View>
 
             {/* Sessions List */}
-            <ScrollView showsVerticalScrollIndicator={false} className="max-h-[400px]">
-              {sessionsList.length === 0 ? (
-                <View className="py-12 items-center justify-center">
-                  <Ionicons name="chatbubbles-outline" size={40} color="#817565" style={{ opacity: 0.5 }} />
-                  <Text className="text-on-surface-variant dark:text-outline text-sm mt-3 text-center">
-                    {t('home.chatbot.noHistory', 'No past conversations yet. Start a new AI journey!')}
-                  </Text>
-                </View>
-              ) : (
-                <View className="gap-2.5">
-                  {sessionsList.map((session) => {
-                    const firstUserMsg = session.messages.find(m => m.role === 'user');
-                    const previewText = firstUserMsg?.content || t('home.chatbot.untitledChat', 'New Consultation');
-                    const isSelected = session.id === currentChatId;
+            {isHistoryLoading ? (
+              <View className="py-12 items-center justify-center">
+                <ActivityIndicator size="small" color="#C8922A" />
+                <Text className="text-xs text-outline mt-3">{t('common.loading', 'Loading conversations...')}</Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-[400px]">
+                {backendHistory.length === 0 && localSessions.length === 0 ? (
+                  <View className="py-12 items-center justify-center">
+                    <Ionicons name="chatbubbles-outline" size={40} color="#817565" style={{ opacity: 0.5 }} />
+                    <Text className="text-on-surface-variant dark:text-outline text-sm mt-3 text-center">
+                      {t('home.chatbot.noHistory', 'No past conversations yet. Start a new AI journey!')}
+                    </Text>
+                  </View>
+                ) : (
+                  <View className="gap-2.5">
+                    {/* Render backend history or merged local history */}
+                    {(backendHistory.length > 0 ? backendHistory : localSessions.map(s => ({
+                      sessionId: s.id,
+                      title: s.messages.find(m => m.role === 'user')?.content || 'Heritage Consultation',
+                      updatedAt: s.updatedAt as any,
+                      messageCount: s.messages.length
+                    }))).map((session) => {
+                      const isSelected = session.sessionId === currentChatId;
+                      const titleText = session.title || 'Heritage Consultation';
 
-                    return (
-                      <TouchableOpacity
-                        key={session.id}
-                        onPress={() => handleSelectSession(session.id)}
-                        activeOpacity={0.8}
-                        style={{
-                          backgroundColor: isSelected 
-                            ? 'rgba(200, 146, 42, 0.12)' 
-                            : (isDark ? '#26241E' : '#F6F3EE'),
-                          borderColor: isSelected ? '#C8922A' : 'transparent',
-                        }}
-                        className="p-3.5 rounded-2xl border flex-row items-center justify-between"
-                      >
-                        <View className="flex-1 pr-3">
-                          <Text 
-                            numberOfLines={1} 
-                            className={`text-sm ${isSelected ? 'font-bold text-pharaoh-gold' : 'font-medium text-on-surface dark:text-dark-on-surface'}`}
-                          >
-                            {previewText}
-                          </Text>
-                          <View className="flex-row items-center gap-2 mt-1">
-                            <Text className="text-[11px] text-outline">
-                              {formatDateLabel(session.updatedAt)}
+                      return (
+                        <TouchableOpacity
+                          key={session.sessionId}
+                          onPress={() => handleSelectSession(session.sessionId)}
+                          activeOpacity={0.8}
+                          style={{
+                            backgroundColor: isSelected 
+                              ? 'rgba(200, 146, 42, 0.12)' 
+                              : (isDark ? '#26241E' : '#F6F3EE'),
+                            borderColor: isSelected ? '#C8922A' : 'transparent',
+                          }}
+                          className="p-3.5 rounded-2xl border flex-row items-center justify-between"
+                        >
+                          <View className="flex-1 pr-3">
+                            <Text 
+                              numberOfLines={1} 
+                              className={`text-sm text-left ${isSelected ? 'font-bold text-pharaoh-gold' : 'font-medium text-on-surface dark:text-dark-on-surface'}`}
+                            >
+                              {titleText}
                             </Text>
-                            <Text className="text-[11px] text-outline">•</Text>
-                            <Text className="text-[11px] text-outline">
-                              {session.messages.length} {t('home.chatbot.messagesCount', 'messages')}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View className="flex-row items-center gap-1">
-                          {isSelected && (
-                            <View className="bg-pharaoh-gold px-2 py-0.5 rounded-full mr-1">
-                              <Text className="text-[9px] text-white font-bold uppercase">Active</Text>
+                            <View className="flex-row items-center gap-2 mt-1">
+                              <Text className="text-[11px] text-outline text-left">
+                                {formatDateLabel(session.updatedAt || (session as any).createdAt)}
+                              </Text>
+                              {session.messageCount !== undefined && (
+                                <>
+                                  <Text className="text-[11px] text-outline">•</Text>
+                                  <Text className="text-[11px] text-outline text-left">
+                                    {session.messageCount} {t('home.chatbot.messagesCount', 'messages')}
+                                  </Text>
+                                </>
+                              )}
                             </View>
-                          )}
-                          <TouchableOpacity
-                            onPress={() => deleteSession(session.id)}
-                            className="p-1.5 active:scale-90"
-                          >
-                            <Ionicons name="trash-outline" size={16} color="#BA1A1A" />
-                          </TouchableOpacity>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </ScrollView>
+                          </View>
+
+                          <View className="flex-row items-center gap-1">
+                            {isSelected && (
+                              <View className="bg-pharaoh-gold px-2 py-0.5 rounded-full mr-1">
+                                <Text className="text-[9px] text-white font-bold uppercase">Active</Text>
+                              </View>
+                            )}
+                            <TouchableOpacity
+                              onPress={() => handleDeleteSession(session.sessionId)}
+                              className="p-1.5 active:scale-90"
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#BA1A1A" />
+                            </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>

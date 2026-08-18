@@ -11,6 +11,7 @@ import { useTrips } from '@/api/hooks/useTrips';
 import { useBookings, useCancelBooking } from '@/api/hooks/useBookings';
 import { useTheme } from '@/hooks/useTheme';
 import { SideMenu } from '@/components/layout/SideMenu';
+import { formatCurrency } from '@/utils/currency';
 
 export default function TripsScreen() {
   const { t, i18n } = useTranslation();
@@ -363,69 +364,72 @@ export default function TripsScreen() {
             const statusTheme = statusColorMap[booking.status] || statusColorMap.pending;
 
             return (
-              <View
+              <TouchableOpacity
                 key={booking._id}
-                className="bg-surface-container-lowest dark:bg-sand-dark rounded-xl overflow-hidden border border-outline-variant/40 p-5 shadow-sm mb-4"
+                activeOpacity={0.9}
+                onPress={() => router.push(`/booking/${booking._id}`)}
+                className="bg-surface-container-lowest dark:bg-sand-dark rounded-2xl overflow-hidden border border-outline-variant/40 p-5 shadow-sm mb-4 active:scale-[0.99]"
               >
                 <View className="flex-row justify-between items-start mb-3">
                   <View className="flex-1 pr-2">
-                    <Text className="text-lg font-headline text-primary dark:text-primary-fixed mb-1" numberOfLines={1}>
+                    <Text className="text-base font-headline text-primary dark:text-primary-fixed mb-0.5 text-left" numberOfLines={1}>
                       {hotelName}
                     </Text>
-                    <Text className="text-xs text-on-surface-variant dark:text-outline">
+                    <Text className="text-xs text-outline text-left">
                       {cityStr}
                     </Text>
                   </View>
-                  <View className={`px-2.5 py-1 rounded-full ${statusTheme.bg}`}>
-                    <Text className={`font-bold text-[9px] uppercase tracking-wider ${statusTheme.text}`}>
+                  <View className={`px-3 py-1 rounded-full ${statusTheme.bg}`}>
+                    <Text className={`font-bold text-[10px] uppercase tracking-wider ${statusTheme.text}`}>
                       {booking.status || 'pending'}
                     </Text>
                   </View>
                 </View>
 
-                <View className="gap-y-2 mb-4 border-t border-b border-outline-variant/10 py-3">
+                <View className="gap-y-2 mb-3.5 border-t border-b border-outline-variant/10 py-3">
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-on-surface-variant dark:text-outline">Check In</Text>
+                    <Text className="text-xs text-outline text-left">{t('hotelDetail.checkIn', 'Check In')}</Text>
                     <Text className="text-xs font-semibold text-on-surface dark:text-dark-on-surface">{formatDate(booking.checkIn)}</Text>
                   </View>
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-on-surface-variant dark:text-outline">Check Out</Text>
+                    <Text className="text-xs text-outline text-left">{t('hotelDetail.checkOut', 'Check Out')}</Text>
                     <Text className="text-xs font-semibold text-on-surface dark:text-dark-on-surface">{formatDate(booking.checkOut)}</Text>
                   </View>
                   <View className="flex-row justify-between">
-                    <Text className="text-xs text-on-surface-variant dark:text-outline">Rooms & Guests</Text>
+                    <Text className="text-xs text-outline text-left">{t('hotelDetail.roomTypes', 'Rooms & Guests')}</Text>
                     <Text className="text-xs font-semibold text-on-surface dark:text-dark-on-surface">
-                      {roomCount} Room(s) • {guestCount} Guest(s)
+                      {roomCount} {t('hotelDetail.rooms', 'Room(s)')} • {guestCount} {t('hotelDetail.guests', 'Guest(s)')}
                     </Text>
                   </View>
                 </View>
 
                 <View className="flex-row justify-between items-center">
                   <View>
-                    <Text className="text-[10px] text-on-surface-variant dark:text-outline uppercase tracking-wider">Total Price</Text>
-                    <Text className="text-lg font-bold text-primary dark:text-primary-fixed mt-0.5">
-                      ${booking.totalPrice ?? 0} {booking.currency || 'EGP'}
+                    <Text className="text-[10px] text-outline uppercase tracking-wider text-left">{t('hotelDetail.total', 'Total Price')}</Text>
+                    <Text className="text-base font-bold text-pharaoh-gold mt-0.5">
+                      {formatCurrency(booking.totalPrice ?? 0, booking.currency || 'EGP')}
                     </Text>
                   </View>
                   
-                  <View className="flex-row items-center gap-3">
+                  <View className="flex-row items-center gap-2">
                     {booking.status !== 'canceled' && booking.status !== 'completed' && (
                       <TouchableOpacity
-                        onPress={() => handleCancelBooking(booking._id)}
-                        className="px-4 py-2 border border-error/45 rounded-full active:scale-95"
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleCancelBooking(booking._id);
+                        }}
+                        className="px-3.5 py-1.5 border border-error/45 rounded-full active:scale-95"
                       >
-                        <Text className="text-error font-semibold text-xs">Cancel</Text>
+                        <Text className="text-error font-semibold text-xs">{t('common.cancel', 'Cancel')}</Text>
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                      onPress={() => router.push(`/booking/${booking._id}`)}
-                      className="px-5 py-2 bg-nile-blue rounded-full active:scale-95"
-                    >
-                      <Text className="text-white font-semibold text-xs">Details</Text>
-                    </TouchableOpacity>
+                    <View className="px-4 py-1.5 bg-pharaoh-gold rounded-full flex-row items-center gap-1">
+                      <Text className="text-white font-bold text-xs">{t('bookings.viewDetails', 'Details')}</Text>
+                      <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={13} color="white" />
+                    </View>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
           ListFooterComponent={

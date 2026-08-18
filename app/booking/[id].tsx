@@ -98,19 +98,22 @@ export default function BookingDetailScreen() {
     : (typeof b.rooms === 'number' ? b.rooms : 1);
 
   const roomPrice = hotel?.averagePricePerNight || 320;
-  const subtotal = roomPrice * roomCount * totalNights;
-  const aiCuratorFee = 45;
-  const conservationTax = 12.50;
-  const totalAmount = b.totalPrice || (subtotal + aiCuratorFee + conservationTax);
+  const totalAmount = b.totalPrice || (roomPrice * roomCount * totalNights * 1.04);
 
   // Status flags
   const isCanceled = b.status === 'canceled';
   const isConfirmed = b.status === 'confirmed';
 
   // Hotel name localization
-  const hotelName = (hotel?.name && typeof hotel.name === 'object')
-    ? (hotel.name[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.name.en || '')
-    : (hotel?.name || 'Heritage Sanctuary');
+  const getHotelName = (): string => {
+    if (!hotel?.name) return 'Heritage Sanctuary';
+    if (typeof hotel.name === 'string') return hotel.name;
+    if (typeof hotel.name === 'object') {
+      return (hotel.name as any)[i18n.language === 'ar' ? 'ar' : 'en'] || (hotel.name as any).en || 'Heritage Sanctuary';
+    }
+    return 'Heritage Sanctuary';
+  };
+  const hotelName: string = getHotelName();
 
   // AI Concierge Tip based on city
   const aiTip = hotel?.city === 'Luxor' 
@@ -124,298 +127,268 @@ export default function BookingDetailScreen() {
       
       {/* Top Header */}
       <View 
-        className="flex-row justify-between items-center px-4 border-b z-50"
+        className="flex-row justify-between items-center px-4 border-b z-50 shadow-sm"
         style={{
           paddingTop: insets.top,
           height: 56 + insets.top,
           backgroundColor: colors.surface,
-          borderBottomColor: colors.outlineVariant + '33',
+          borderBottomColor: colors.outlineVariant + '26',
         }}
       >
         <TouchableOpacity onPress={() => router.back()} className="p-2 active:scale-95">
           <Ionicons name={isRTL ? "arrow-forward" : "arrow-back"} size={24} color="#C8922A" />
         </TouchableOpacity>
-        <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">
-          {t('bookings.detail.reservationId', 'Booking Detail')}
+        <Text className="font-headline text-xl text-pharaoh-gold font-bold">
+          {t('bookings.detail.title', 'Booking Details')}
         </Text>
-        <TouchableOpacity className="p-2 active:scale-95">
-          <Ionicons name="sparkles" size={24} color="#C8922A" />
+        <TouchableOpacity onPress={() => router.push('/(tabs)/ai')} className="p-2 active:scale-95">
+          <Ionicons name="sparkles" size={22} color="#C8922A" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View className="p-4 md:p-10 max-w-[1200px] mx-auto w-full">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+        <View className="p-4 md:p-8 max-w-[800px] mx-auto w-full gap-5">
           
-          {/* Reservation Hero Card */}
+          {/* Reservation Header Card */}
           <View 
-            className="border rounded-xl p-6 shadow-sm mb-6"
+            className="border rounded-2xl p-5 shadow-sm"
             style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
           >
-            <View className="flex-col md:flex-row justify-between items-start mb-6 gap-4 border-b border-outline-variant/10 pb-4">
+            <View className="flex-row justify-between items-start mb-4 pb-3 border-b border-outline-variant/15">
               <View>
-                <Text className="text-xs text-pharaoh-gold font-bold uppercase tracking-wider">
-                  Reservation ID: #{b._id?.substring(0, 8).toUpperCase() || 'RH-99281'}
+                <Text className="text-[11px] text-pharaoh-gold font-bold uppercase tracking-wider text-left">
+                  {t('bookings.detail.reservationId', 'Reservation ID')}: #{b._id?.substring(0, 8).toUpperCase() || 'RH-99281'}
                 </Text>
-                <Text className="font-headline text-headline-md mt-1 text-left" style={{ color: colors.onSurface }}>
-                  {isCanceled ? t('bookings.status.canceled', 'Canceled') : isConfirmed ? t('bookings.status.confirmed', 'Confirmed & Waiting') : t('bookings.status.pending', 'Pending Reservation')}
+                <Text className="font-headline text-xl mt-1 text-left" style={{ color: colors.onSurface }}>
+                  {isCanceled ? t('bookings.status.canceled', 'Canceled') : isConfirmed ? t('bookings.status.confirmed', 'Confirmed & Reserved') : t('bookings.status.pending', 'Pending Confirmation')}
                 </Text>
               </View>
-              <View className="bg-papyrus-green/10 px-4 py-2 rounded-full flex-row items-center gap-1.5 self-start">
-                <Ionicons name="checkmark-circle" size={14} color="#2D7A4F" />
-                <Text className="text-papyrus-green text-xs font-bold font-label">
-                  {t('bookings.verifiedByAi', 'Verified by AI Concierge')}
+              <View 
+                className="px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+                style={{ backgroundColor: isCanceled ? '#BA1A1A18' : isConfirmed ? '#2D7A4F18' : '#C8922A18' }}
+              >
+                <Ionicons 
+                  name={isCanceled ? "close-circle" : isConfirmed ? "checkmark-circle" : "time"} 
+                  size={13} 
+                  color={isCanceled ? '#BA1A1A' : isConfirmed ? '#2D7A4F' : '#C8922A'} 
+                />
+                <Text 
+                  className="text-xs font-bold uppercase tracking-wide"
+                  style={{ color: isCanceled ? '#BA1A1A' : isConfirmed ? '#2D7A4F' : '#C8922A' }}
+                >
+                  {b.status || 'pending'}
                 </Text>
               </View>
             </View>
 
-            {/* Horizontal Timeline */}
-            <View className="relative flex-row justify-between items-center px-4 py-2">
-              <View className="absolute top-[28px] left-8 right-8 h-[2px] bg-outline-variant/30" />
-              <View 
-                className="absolute top-[28px] left-8 h-[2px] bg-pharaoh-gold" 
-                style={{ width: isConfirmed ? '50%' : isCanceled ? '0%' : '20%' }} 
-              />
-
-              {/* Booked Step */}
-              <View className="items-center z-10 px-2" style={{ backgroundColor: colors.surface }}>
-                <View className="w-10 h-10 rounded-full bg-pharaoh-gold items-center justify-center shadow">
-                  <Ionicons name="checkmark" size={20} color="white" />
+            {/* Visual Timeline */}
+            <View className="flex-row justify-between items-center px-3 py-1">
+              <View className="items-center">
+                <View className="w-8 h-8 rounded-full bg-pharaoh-gold items-center justify-center shadow">
+                  <Ionicons name="checkmark" size={16} color="white" />
                 </View>
-                <Text className="text-xs font-bold text-pharaoh-gold mt-2">
-                  {t('bookings.stepBooked', 'Booked')}
-                </Text>
-                <Text className="text-[10px] mt-0.5" style={{ color: colors.outline }}>
-                  {t('bookings.status.completed', 'Completed')}
+                <Text className="text-[11px] font-bold text-pharaoh-gold mt-1.5">
+                  {t('bookings.statusPage.journey.booked', 'Booked')}
                 </Text>
               </View>
 
-              {/* Confirmed Step */}
-              <View className="items-center z-10 px-2" style={{ backgroundColor: colors.surface }}>
-                <View className="w-10 h-10 rounded-full items-center justify-center shadow" style={{ backgroundColor: isConfirmed ? colors.pharaohGold : colors.surfaceContainerHighest }}>
-                  <Ionicons name="star" size={18} color={isConfirmed ? 'white' : '#817565'} />
+              <View className="flex-1 h-[2px] mx-2" style={{ backgroundColor: isConfirmed ? colors.pharaohGold : colors.outlineVariant + '4D' }} />
+
+              <View className="items-center">
+                <View 
+                  className="w-8 h-8 rounded-full items-center justify-center shadow"
+                  style={{ backgroundColor: isConfirmed ? colors.pharaohGold : colors.surfaceContainerHighest }}
+                >
+                  <Ionicons name="star" size={14} color={isConfirmed ? 'white' : '#817565'} />
                 </View>
-                <Text className="text-xs font-bold mt-2" style={{ color: isConfirmed ? colors.pharaohGold : colors.outline }}>
-                  {t('bookings.status.confirmed', 'Confirmed')}
-                </Text>
-                <Text className="text-[10px] mt-0.5" style={{ color: colors.outline }}>
-                  {isConfirmed ? t('bookings.active', 'Active') : t('bookings.status.pending', 'Pending')}
+                <Text className="text-[11px] font-bold mt-1.5" style={{ color: isConfirmed ? colors.pharaohGold : colors.outline }}>
+                  {t('bookings.statusPage.journey.confirmed', 'Confirmed')}
                 </Text>
               </View>
 
-              {/* Check-in Step */}
-              <View className="items-center z-10 px-2" style={{ backgroundColor: colors.surface }}>
-                <View className="w-10 h-10 rounded-full items-center justify-center shadow" style={{ backgroundColor: colors.surfaceContainerHighest }}>
-                  <Ionicons name="time-outline" size={18} color="#817565" />
+              <View className="flex-1 h-[2px] mx-2" style={{ backgroundColor: colors.outlineVariant + '4D' }} />
+
+              <View className="items-center">
+                <View className="w-8 h-8 rounded-full items-center justify-center shadow" style={{ backgroundColor: colors.surfaceContainerHighest }}>
+                  <Ionicons name="key-outline" size={14} color="#817565" />
                 </View>
-                <Text className="text-xs font-bold mt-2" style={{ color: colors.outline }}>
+                <Text className="text-[11px] font-bold mt-1.5" style={{ color: colors.outline }}>
                   {t('hotelDetail.checkIn', 'Check-in')}
                 </Text>
-                <Text className="text-[10px] mt-0.5" style={{ color: colors.outline }}>
-                  {formatDate(b.checkIn)}
-                </Text>
               </View>
             </View>
           </View>
 
-          {/* Main Content Layout */}
-          <View className="flex-col gap-6">
-            
-            {/* Hotel Summary Details */}
-            <Card 
-              className="p-0 overflow-hidden border rounded-xl shadow-sm"
-              style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-            >
-              <Image
-                source={{ uri: hotel?.coverImage || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDbY96CQH0M1fWTY4mM2s9n1JgShaa8Z-wlfUZnFGiDhxhHzmbRyRCw2aY_fMzJRtN0-YKJQxBEOm6YHQWFTGgEpHUCXmV1nm1Dj9yWbOpzEv0sB-rSAgrZbj8rHHprn0xnU3G6WX1jgjoH7P6edji2tZbZ71MRbd7d_gx2CP4yj4f4cHL_SFSKsTafKG242HZKbMJgV_IPIbTmBSXlMCka6vdbDg_WmptmK6xDpoKf3BGThjO9LwTm0SJtRm_C5yFfVQDiY22GDx4' }}
-                className="w-full h-48"
-                resizeMode="cover"
-              />
-              <CardContent className="p-6">
-                <View className="flex-row justify-between items-start gap-4 mb-4">
-                  <View className="flex-1">
-                    <Text className="font-headline text-headline-md text-left" style={{ color: colors.onSurface }}>
-                      {hotelName}
-                    </Text>
-                    <View className="flex-row items-center gap-1.5 mt-1">
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Text className="text-xs font-label ml-2" style={{ color: colors.outline }}>
-                        {hotel?.stars || 5}.0 ({t('hotelListing.luxuryLandmark', 'Heritage Class')})
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="px-4 py-2.5 rounded-lg items-center min-w-[70px]" style={{ backgroundColor: colors.surfaceContainerHigh }}>
-                    <Text className="text-[10px] uppercase font-label" style={{ color: colors.outline }}>
-                      {t('bookings.nights', 'Nights')}
-                    </Text>
-                    <Text className="font-headline text-headline-md-mobile mt-0.5" style={{ color: colors.onSurface }}>
-                      {totalNights}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Check In / Out info row */}
-                <View className="flex-row gap-6 pt-4 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
-                  <View className="flex-row items-start gap-2 flex-1">
-                    <Ionicons name="calendar-outline" size={18} color="#C8922A" className="mt-0.5" />
-                    <View>
-                      <Text className="text-xs font-label uppercase text-left" style={{ color: colors.outline }}>
-                        {t('hotelDetail.checkIn', 'Check-in')}
-                      </Text>
-                      <Text className="text-sm font-bold mt-0.5 text-left" style={{ color: colors.onSurface }}>
-                        {formatDate(b.checkIn)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="flex-row items-start gap-2 flex-1">
-                    <Ionicons name="log-out-outline" size={18} color="#C8922A" className="mt-0.5" />
-                    <View>
-                      <Text className="text-xs font-label uppercase text-left" style={{ color: colors.outline }}>
-                        {t('hotelDetail.checkOut', 'Check-out')}
-                      </Text>
-                      <Text className="text-sm font-bold mt-0.5 text-left" style={{ color: colors.onSurface }}>
-                        {formatDate(b.checkOut)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-
-            {/* Booked Rooms Breakdown Section */}
-            {roomsList.length > 0 && (
-              <View 
-                className="border rounded-xl p-5 shadow-sm"
-                style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-              >
-                <View className="flex-row items-center gap-2 border-b pb-3 mb-3" style={{ borderBottomColor: colors.outlineVariant + '20' }}>
-                  <Ionicons name="bed-outline" size={18} color="#C8922A" />
-                  <Text className="font-headline text-headline-md-mobile text-pharaoh-gold">
-                    {t('hotelDetail.roomTypes', 'Booked Sanctuaries')}
+          {/* Hotel Summary Card */}
+          <Card 
+            className="p-0 overflow-hidden border rounded-2xl shadow-sm"
+            style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+          >
+            <Image
+              source={{ uri: hotel?.coverImage || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDbY96CQH0M1fWTY4mM2s9n1JgShaa8Z-wlfUZnFGiDhxhHzmbRyRCw2aY_fMzJRtN0-YKJQxBEOm6YHQWFTGgEpHUCXmV1nm1Dj9yWbOpzEv0sB-rSAgrZbj8rHHprn0xnU3G6WX1jgjoH7P6edji2tZbZ71MRbd7d_gx2CP4yj4f4cHL_SFSKsTafKG242HZKbMJgV_IPIbTmBSXlMCka6vdbDg_WmptmK6xDpoKf3BGThjO9LwTm0SJtRm_C5yFfVQDiY22GDx4' }}
+              className="w-full h-44"
+              resizeMode="cover"
+            />
+            <CardContent className="p-5">
+              <View className="flex-row justify-between items-start mb-3">
+                <View className="flex-1 pr-2">
+                  <Text className="font-headline text-lg text-left" style={{ color: colors.onSurface }}>
+                    {hotelName}
+                  </Text>
+                  <Text className="text-xs text-outline text-left mt-0.5">
+                    {hotel?.city || 'Egypt'}, Egypt
                   </Text>
                 </View>
-                {roomsList.map((roomItem: any, rIdx: number) => (
-                  <View key={rIdx} className="flex-row justify-between items-center py-2">
-                    <View>
-                      <Text className="font-bold text-sm text-left" style={{ color: colors.onSurface }}>
-                        {roomItem.roomType || 'Deluxe Room'} × {roomItem.quantity || 1}
-                      </Text>
-                      <Text className="text-xs text-outline text-left mt-0.5">
-                        {roomItem.guests?.adults || 2} {t('hotelDetail.guests', 'Guests')}
-                      </Text>
-                    </View>
-                    <Text className="font-bold text-sm text-pharaoh-gold">
-                      {formatCurrency(roomItem.pricePerNight || roomPrice, b.currency || hotel?.currency)} / {t('hotelListing.perNight', 'night')}
+                <View className="px-3 py-1.5 rounded-xl items-center" style={{ backgroundColor: colors.surfaceContainerHigh }}>
+                  <Text className="text-[10px] uppercase font-bold" style={{ color: colors.outline }}>
+                    {t('bookings.nights', 'Nights')}
+                  </Text>
+                  <Text className="font-headline text-base font-bold mt-0.5" style={{ color: colors.onSurface }}>
+                    {totalNights}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Check-in / Check-out Dates */}
+              <View className="flex-row gap-4 pt-3 border-t" style={{ borderTopColor: colors.outlineVariant + '22' }}>
+                <View className="flex-row items-center gap-2 flex-1">
+                  <Ionicons name="calendar-outline" size={16} color="#C8922A" />
+                  <View>
+                    <Text className="text-[10px] font-bold uppercase text-left" style={{ color: colors.outline }}>
+                      {t('hotelDetail.checkIn', 'Check-in')}
+                    </Text>
+                    <Text className="text-xs font-bold text-left mt-0.5" style={{ color: colors.onSurface }}>
+                      {formatDate(b.checkIn)}
                     </Text>
                   </View>
-                ))}
+                </View>
+                <View className="flex-row items-center gap-2 flex-1">
+                  <Ionicons name="log-out-outline" size={16} color="#C8922A" />
+                  <View>
+                    <Text className="text-[10px] font-bold uppercase text-left" style={{ color: colors.outline }}>
+                      {t('hotelDetail.checkOut', 'Check-out')}
+                    </Text>
+                    <Text className="text-xs font-bold text-left mt-0.5" style={{ color: colors.onSurface }}>
+                      {formatDate(b.checkOut)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+
+          {/* Booked Rooms Breakdown */}
+          {roomsList.length > 0 && (
+            <View 
+              className="border rounded-2xl p-5 shadow-sm"
+              style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+            >
+              <View className="flex-row items-center gap-2 border-b pb-3 mb-3" style={{ borderBottomColor: colors.outlineVariant + '20' }}>
+                <Ionicons name="bed-outline" size={18} color="#C8922A" />
+                <Text className="font-headline text-base text-pharaoh-gold font-bold">
+                  {t('hotelDetail.roomTypes', 'Booked Sanctuaries')}
+                </Text>
+              </View>
+              {roomsList.map((roomItem: any, rIdx: number) => (
+                <View key={rIdx} className="flex-row justify-between items-center py-2 border-b border-outline-variant/10">
+                  <View>
+                    <Text className="font-bold text-sm text-left" style={{ color: colors.onSurface }}>
+                      {roomItem.roomType || 'Deluxe Sanctuary Room'} × {roomItem.quantity || 1}
+                    </Text>
+                    <Text className="text-xs text-outline text-left mt-0.5">
+                      {roomItem.guests?.adults || 2} {t('hotelDetail.guests', 'Guests')}
+                    </Text>
+                  </View>
+                  <Text className="font-bold text-sm text-pharaoh-gold">
+                    {formatCurrency(roomItem.pricePerNight || roomPrice, b.currency || hotel?.currency)} / {t('hotelListing.perNight', 'night')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Price Summary Card */}
+          <View 
+            className="border rounded-2xl p-5 shadow-sm"
+            style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+          >
+            <View className="flex-row items-center gap-2 border-b pb-3 mb-3" style={{ borderBottomColor: colors.outlineVariant + '22' }}>
+              <Ionicons name="receipt-outline" size={18} color="#C8922A" />
+              <Text className="font-headline text-base text-pharaoh-gold font-bold">
+                {t('bookings.detail.paymentSummary', 'Payment Summary')}
+              </Text>
+            </View>
+            
+            <View className="flex-col gap-2.5">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-xs" style={{ color: colors.onSurfaceVariant }}>
+                  {roomCount} {t('hotelDetail.rooms', 'Room(s)')} × {totalNights} {t('bookings.nights', 'night(s)')}
+                </Text>
+                <Text className="text-xs font-bold" style={{ color: colors.onSurface }}>
+                  {formatCurrency(totalAmount, b.currency || hotel?.currency)}
+                </Text>
+              </View>
+
+              <View className="flex-row justify-between items-center">
+                <Text className="text-xs" style={{ color: colors.onSurfaceVariant }}>
+                  {t('bookings.paymentStatusLabel', 'Payment Method')}
+                </Text>
+                <Text className="text-xs font-bold text-pharaoh-gold">
+                  {b.specialRequests?.includes('Stripe') ? t('bookings.paidStripe', 'Stripe Online') : t('bookings.cashOnArrival', 'Cash on Arrival')}
+                </Text>
+              </View>
+              
+              <View className="h-[1px] border-t border-dashed my-1.5" style={{ borderTopColor: colors.outlineVariant + '4D' }} />
+              
+              <View className="flex-row justify-between items-center pt-1">
+                <Text className="font-headline text-xs uppercase tracking-widest" style={{ color: colors.outline }}>
+                  {t('hotelDetail.total', 'Total Amount')}
+                </Text>
+                <Text className="font-headline text-xl text-pharaoh-gold font-bold">
+                  {formatCurrency(totalAmount, b.currency || hotel?.currency)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Cancel Booking Action */}
+            {!isCanceled && (
+              <View className="mt-5 pt-4 border-t" style={{ borderTopColor: colors.outlineVariant + '22' }}>
+                <TouchableOpacity
+                  onPress={handleCancelBooking}
+                  disabled={isCancelling}
+                  className="w-full border border-danger/60 py-3.5 rounded-full flex-row items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  {isCancelling ? (
+                    <ActivityIndicator size="small" color="#BA1A1A" />
+                  ) : (
+                    <>
+                      <Ionicons name="close-circle-outline" size={17} color="#BA1A1A" />
+                      <Text className="text-danger font-bold text-xs">
+                        {t('bookings.cancelBooking', 'Cancel Reservation')}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             )}
+          </View>
 
-            {/* Price Calculations */}
-            <View 
-              className="border relative p-1 rounded-2xl shadow-resting"
-              style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-            >
-              <View className="border border-pharaoh-gold/25 p-5 rounded-xl" style={{ backgroundColor: colors.background }}>
-                <View className="flex-row items-center gap-2 border-b pb-3 mb-4" style={{ borderBottomColor: colors.outlineVariant + '33' }}>
-                  <Ionicons name="receipt-outline" size={18} color="#C8922A" />
-                  <Text className="font-headline text-headline-md-mobile text-pharaoh-gold">
-                    {t('bookings.detail.paymentSummary', 'Price Summary')}
-                  </Text>
-                </View>
-                
-                <View className="flex-col gap-3.5">
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>
-                      {roomCount} {t('hotelDetail.rooms', 'Room(s)')} × {totalNights} {t('bookings.nights', 'night(s)')}
-                    </Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>
-                      {formatCurrency(subtotal, b.currency || hotel?.currency)}
-                    </Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>
-                      {t('hotelDetail.serviceFee', 'AI Curator Fee')}
-                    </Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>
-                      {formatCurrency(aiCuratorFee, b.currency || hotel?.currency)}
-                    </Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-body-md font-body" style={{ color: colors.onSurfaceVariant }}>
-                      {t('hotelDetail.taxesAndFees', 'Heritage Conservation Tax')}
-                    </Text>
-                    <Text className="text-body-md font-semibold" style={{ color: colors.onSurface }}>
-                      {formatCurrency(conservationTax, b.currency || hotel?.currency)}
-                    </Text>
-                  </View>
-                  
-                  <View className="h-[1px] border-t border-dashed my-2 pt-2" style={{ borderTopColor: colors.outlineVariant + '66' }} />
-                  
-                  <View className="flex-row justify-between items-center">
-                    <Text className="font-headline text-label-md uppercase tracking-widest" style={{ color: colors.outline }}>
-                      {t('hotelDetail.total', 'Total Amount')}
-                    </Text>
-                    <Text className="font-headline text-2xl text-pharaoh-gold font-bold">
-                      {formatCurrency(totalAmount, b.currency || hotel?.currency)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Cancel Booking Action */}
-                {!isCanceled && (
-                  <View className="mt-8 gap-3">
-                    <TouchableOpacity
-                      onPress={handleCancelBooking}
-                      disabled={isCancelling}
-                      className="w-full border border-danger py-3.5 rounded-full flex-row items-center justify-center gap-2 active:scale-[0.98]"
-                    >
-                      {isCancelling ? (
-                        <ActivityIndicator size="small" color="#BA1A1A" />
-                      ) : (
-                        <>
-                          <Ionicons name="close-circle-outline" size={18} color="#BA1A1A" />
-                          <Text className="text-danger font-bold text-label-md">
-                            {t('bookings.cancelBooking', 'Cancel Reservation')}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* AI Concierge prompt recommendation */}
-            <View 
-              className="border rounded-xl p-5 relative overflow-hidden mb-6"
-              style={{ backgroundColor: colors.pharaohGold + '14', borderColor: colors.pharaohGold + '4D' }}
-            >
-              <View className="flex-row items-center gap-2 mb-3">
-                <Ionicons name="sparkles" size={16} color="#C8922A" />
-                <Text className="text-pharaoh-gold font-bold text-label-sm uppercase tracking-wider">
-                  {t('bookings.detail.rahalInsightTitle', 'AI Concierge Tips')}
-                </Text>
-              </View>
-              <Text className="font-body text-body-md italic leading-relaxed mb-4 text-left" style={{ color: colors.onSurfaceVariant }}>
+          {/* AI Concierge Tip Card */}
+          <View 
+            className="border rounded-2xl p-4 flex-row items-start gap-3"
+            style={{ backgroundColor: colors.pharaohGold + '14', borderColor: colors.pharaohGold + '38' }}
+          >
+            <Ionicons name="sparkles" size={18} color="#C8922A" className="mt-0.5" />
+            <View className="flex-1">
+              <Text className="text-pharaoh-gold font-bold text-xs uppercase tracking-wider text-left mb-1">
+                {t('bookings.detail.rahalInsightTitle', 'AI Concierge Tip')}
+              </Text>
+              <Text className="text-xs font-body italic leading-relaxed text-left" style={{ color: colors.onSurfaceVariant }}>
                 {aiTip}
               </Text>
-              <TouchableOpacity 
-                onPress={() => router.push('/(tabs)/ai')}
-                className="flex-row items-center gap-1 active:opacity-85"
-              >
-                <Text className="text-pharaoh-gold font-bold text-label-sm">
-                  {t('bookings.askAiAbout', `Ask Concierge about ${hotel?.city || 'Egypt'}`)}
-                </Text>
-                <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={14} color="#C8922A" />
-              </TouchableOpacity>
             </View>
-
           </View>
+
         </View>
       </ScrollView>
     </View>

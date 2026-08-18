@@ -1,10 +1,18 @@
 // src/hooks/useAIChat.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { api } from '@/api/client';
 import { useAISessionStore, ChatMessage, ChatSession } from '@/store/aiSessionStore';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { SuccessResponse, AIChatResponse } from '@/types/api';
+
+export interface BackendConversationItem {
+  sessionId: string;
+  title?: string;
+  lastMessage?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  messageCount?: number;
+}
 
 interface UseAIChatReturn {
   messages: ChatMessage[];
@@ -14,7 +22,9 @@ interface UseAIChatReturn {
   currentChatId: string | null;
   setCurrentSession: (id: string) => void;
   getSession: (id: string) => ChatSession | undefined;
-  deleteSession: (id: string) => void;
+  deleteSession: (id: string) => Promise<void>;
+  fetchBackendHistory: () => Promise<BackendConversationItem[]>;
+  loadBackendSession: (sessionId: string) => Promise<void>;
 }
 
 export function useAIChat(): UseAIChatReturn {
@@ -22,7 +32,7 @@ export function useAIChat(): UseAIChatReturn {
   const [isLoading, setIsLoading] = useState(false);
   const { addMessage, createChatSession, getChatSession, deleteChatSession, chatSessions } = useAISessionStore();
   const { showToast } = useUIStore();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
 
   const createSession = useCallback(() => {
     const id = createChatSession();
@@ -90,12 +100,81 @@ export function useAIChat(): UseAIChatReturn {
     return getChatSession(id);
   }, [getChatSession]);
 
-  const deleteSession = useCallback((id: string) => {
+  const deleteSession = useCallback(async (id: string) => {
     deleteChatSession(id);
     if (currentChatId === id) {
       setCurrentChatId(null);
     }
-  }, [currentChatId, deleteChatSession]);
+    if (token) {
+      try {
+        await api.delete(`ai/chat/${id}`).json();
+      } catch (err) {
+        console.log('Failed to delete backend session:', err);
+      }
+    }
+  }, [currentChatId, deleteChatSession, token]);
+
+  const fetchBackendHistory = useCallback(async (): Promise<BackendConversationItem[]> => {
+    if (!token) return [];
+    try {
+      const res = await api.get('ai/chat').json<{
+        status: string;
+        data: BackendConversationItem[];
+      }>();
+      return res?.data || [];
+    } catch (err) {
+      console.log('Failed to fetch backend chat history:', err);
+      return [];
+    }
+  }, [token]);
+
+  const loadBackendSession = useCallback(async (sessionId: string) => {
+    setCurrentChatId(sessionId);
+    if (!token) return;
+    try {
+      const res = await api.get(`ai/chat/${sessionId}`).json<{
+        status: string;
+        data: {
+          sessionId: string;
+          title?: string;
+          messages: Array<{
+            role: 'user' | 'assistant' | 'system';
+            content: string;
+            createdAt?: string;
+            tokensUsed?: number;
+          }>;
+        };
+      }>();
+
+      if (res?.data?.messages && res.data.messages.length > 0) {
+        const existingSession = getChatSession(sessionId);
+        if (!existingSession || existingSession.messages.length === 0) {
+          // Recreate session with backend messages
+          const mappedMessages: ChatMessage[] = res.data.messages.map((m, idx) => ({
+            id: `bk_${sessionId}_${idx}`,
+            role: m.role as any,
+            content: m.content,
+            timestamp: m.createdAt ? new Date(m.createdAt) : new Date(),
+            tokensUsed: m.tokensUsed,
+          }));
+
+          useAISessionStore.setState((state) => {
+            const next = new Map(state.chatSessions);
+            next.set(sessionId, {
+              id: sessionId,
+              title: res.data.title || 'Heritage Chat',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              messages: mappedMessages,
+            });
+            return { chatSessions: next };
+          });
+        }
+      }
+    } catch (err) {
+      console.log('Failed to load backend session details:', err);
+    }
+  }, [token, getChatSession]);
 
   const messages = currentChatId ? getChatSession(currentChatId)?.messages || [] : [];
 
@@ -108,5 +187,7 @@ export function useAIChat(): UseAIChatReturn {
     setCurrentSession,
     getSession,
     deleteSession,
+    fetchBackendHistory,
+    loadBackendSession,
   };
 }

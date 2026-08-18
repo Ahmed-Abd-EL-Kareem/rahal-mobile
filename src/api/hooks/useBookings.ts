@@ -57,10 +57,29 @@ export function useBooking(id: string) {
   });
 }
 
+export interface CreateBookingRoomInput {
+  room?: string;
+  quantity?: number;
+  guests?: { adults: number; children?: number };
+  roomType?: string;
+  pricePerNight?: number;
+}
+
+export interface CreateBookingInput {
+  hotel: string;
+  checkIn: string;
+  checkOut: string;
+  guests?: number;
+  rooms?: number | CreateBookingRoomInput[];
+  room?: string;
+  trip?: string;
+  specialRequests?: string;
+}
+
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { hotel: string; checkIn: string; checkOut: string; guests: number; rooms: number; trip?: string; specialRequests?: string }) => 
+    mutationFn: (data: CreateBookingInput) => 
       api.post('bookings', { json: data }).json<{ status: 'success'; data: Booking; message: string }>(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
