@@ -216,9 +216,11 @@ export default function TripsScreen() {
             const imageUri = trip.imageUrl || fallbackImage;
 
             return (
-              <View
+              <TouchableOpacity
                 key={trip._id}
-                className="bg-surface-container-lowest dark:bg-sand-dark rounded-xl overflow-hidden shadow-sm border border-outline-variant/40 mb-6"
+                activeOpacity={0.9}
+                onPress={() => router.push(`/trip/${trip._id}`)}
+                className="bg-surface-container-lowest dark:bg-sand-dark rounded-xl overflow-hidden shadow-sm border border-outline-variant/40 mb-6 active:scale-[0.99]"
               >
                 <View className="relative h-56 w-full">
                   <Image source={{ uri: imageUri }} className="w-full h-full object-cover" />
@@ -230,8 +232,14 @@ export default function TripsScreen() {
                     </Text>
                   </View>
 
-                  <View className="absolute bottom-4 right-4 bg-white/90 dark:bg-obsidian/95 backdrop-blur-md px-3 py-1 rounded-lg border border-pharaoh-gold/20 shadow-sm">
-                    <Text className="text-primary dark:text-primary-fixed font-bold text-label-sm">
+                  <View className="absolute bottom-3 left-3 bg-obsidian/70 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20">
+                    <Text className="text-white font-label-sm text-[12px]">
+                      {trip.duration} Days • {trip.travelers} Travelers
+                    </Text>
+                  </View>
+
+                  <View className="absolute bottom-3 right-3 bg-obsidian/70 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20">
+                    <Text className="text-pharaoh-gold font-bold text-label-sm">
                       ${trip.estimatedTotalCost || '2,450'}
                     </Text>
                   </View>
@@ -239,56 +247,42 @@ export default function TripsScreen() {
                 
                 <View className="p-5">
                   <View className="flex-row justify-between items-start mb-2">
-                    <Text className="font-headline text-headline-md-mobile text-on-surface dark:text-dark-on-surface flex-1 pr-2">
+                    <Text className="font-headline text-headline-md-mobile text-on-surface dark:text-dark-on-surface flex-1 pr-2 text-left">
                       {titleStr}
                     </Text>
-                    <TouchableOpacity className="p-1">
-                      <Ionicons name="ellipsis-vertical" size={18} color="#817565" />
-                    </TouchableOpacity>
                   </View>
                   
-                  <Text className="text-on-surface-variant dark:text-outline text-body-md mb-4 flex-row items-center gap-1">
+                  <View className="flex-row items-center gap-1 mb-3">
                     <Ionicons name="location-outline" size={14} color="#817565" />
-                    <Text className="ml-1 text-on-surface-variant dark:text-dark-on-surface-variant">{destName}</Text>
-                  </Text>
+                    <Text className="text-outline dark:text-dark-outline text-label-md text-left">{destName}</Text>
+                  </View>
 
-                  <Text className="text-on-surface-variant dark:text-outline text-body-md mb-4 leading-relaxed" numberOfLines={2}>
+                  <Text className="text-on-surface-variant dark:text-outline text-body-md mb-4 leading-relaxed text-left" numberOfLines={2}>
                     {summaryStr || `Explore the beautiful heritage, luxury stays, and memorable local tours in ${destName}.`}
                   </Text>
 
-                  <View className="flex-row items-center gap-4 border-t border-outline-variant/20 pt-4">
-                    <View className="flex-row items-center gap-1 text-on-surface-variant dark:text-outline">
-                      <Ionicons name="calendar-outline" size={14} color="#817565" />
-                      <Text className="font-semibold text-label-sm ml-1 text-on-surface-variant dark:text-dark-on-surface-variant">{trip.duration} Days</Text>
-                    </View>
-                    <View className="flex-row items-center gap-1 text-on-surface-variant dark:text-outline">
-                      <Ionicons name="people-outline" size={14} color="#817565" />
-                      <Text className="font-semibold text-label-sm ml-1 text-on-surface-variant dark:text-dark-on-surface-variant">{trip.travelers} Travelers</Text>
-                    </View>
-
-                    <View className="flex-1 flex-row justify-end items-center gap-3">
-                      <TouchableOpacity
-                        onPress={() => router.push({
+                  <View className="flex-row justify-between items-center border-t border-outline-variant/20 pt-4">
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        router.push({
                           pathname: '/ai-hotel-recommendations',
                           params: { tripId: trip._id }
-                        })}
-                        className="flex-row items-center gap-1 bg-pharaoh-gold/10 dark:bg-pharaoh-gold/20 px-3 py-1.5 rounded-full active:scale-95"
-                      >
-                        <Ionicons name="sparkles" size={12} color="#C8922A" />
-                        <Text className="text-pharaoh-gold font-bold text-[11px] uppercase tracking-wider">AI Hotels</Text>
-                      </TouchableOpacity>
+                        });
+                      }}
+                      className="flex-row items-center gap-1.5 bg-pharaoh-gold/15 dark:bg-pharaoh-gold/25 px-3.5 py-1.5 rounded-full active:scale-95 border border-pharaoh-gold/30"
+                    >
+                      <Ionicons name="sparkles" size={13} color="#C8922A" />
+                      <Text className="text-pharaoh-gold font-bold text-[11px] uppercase tracking-wider">AI Hotels</Text>
+                    </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={() => router.push(`/trip/${trip._id}`)}
-                        className="flex-row items-center gap-0.5 active:scale-95"
-                      >
-                        <Text className="text-pharaoh-gold font-bold text-label-sm">Details</Text>
-                        <Ionicons name="chevron-forward" size={14} color="#C8922A" />
-                      </TouchableOpacity>
+                    <View className="flex-row items-center gap-1">
+                      <Text className="text-pharaoh-gold font-bold text-label-sm">View Itinerary</Text>
+                      <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={16} color="#C8922A" />
                     </View>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
           ListFooterComponent={
