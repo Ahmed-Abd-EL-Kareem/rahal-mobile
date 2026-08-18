@@ -80,7 +80,14 @@ export default function HotelsScreen() {
           >
             <Ionicons name="menu-outline" size={24} color="#C8922A" />
           </TouchableOpacity>
-          <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+          <View className="flex-row items-center gap-2">
+            <Image 
+              source={require('@/assets/logo-2.png')} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain" 
+            />
+            <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+          </View>
         </View>
         <TouchableOpacity className="p-2 active:scale-95 transition-transform">
           <Ionicons name="notifications-outline" size={24} color="#C8922A" />

@@ -1,6 +1,5 @@
-// src/components/layout/SideMenu.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,11 +44,15 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
       >
         <View>
           <View className="flex-row justify-between items-center mb-8 mt-4">
-            <View className="flex-row items-center gap-2">
-              <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
-                <Ionicons name="compass" size={20} color="#C8922A" />
+            <View className="flex-row items-center gap-2.5">
+              <View className="w-10 h-10 rounded-full border flex items-center justify-center p-1 overflow-hidden" style={{ borderColor: '#C8922A', backgroundColor: isDark ? '#1E1810' : '#FCF9F4' }}>
+                <Image 
+                  source={require('@/assets/logo-2.png')} 
+                  style={{ width: 28, height: 28 }} 
+                  resizeMode="contain" 
+                />
               </View>
-              <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">Rahal</Text>
+              <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5 font-bold">Rahal</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />

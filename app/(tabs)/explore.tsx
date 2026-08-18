@@ -177,12 +177,19 @@ export default function ExploreScreen() {
           >
             <Ionicons name="menu-outline" size={24} color="#C8922A" />
           </TouchableOpacity>
-          <Text 
-            className="font-headline text-2xl text-pharaoh-gold font-bold leading-tight flex-shrink-1" 
-            numberOfLines={1}
-          >
-            Rahal
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <Image 
+              source={require('@/assets/logo-2.png')} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain" 
+            />
+            <Text 
+              className="font-headline text-2xl text-pharaoh-gold font-bold leading-tight flex-shrink-1" 
+              numberOfLines={1}
+            >
+              Rahal
+            </Text>
+          </View>
         </View>
         <TouchableOpacity className="active:scale-95 p-1" activeOpacity={0.7}>
           <Ionicons name="notifications-outline" size={24} color="#C8922A" />

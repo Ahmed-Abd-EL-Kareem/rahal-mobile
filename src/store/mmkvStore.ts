@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const cache = new Map<string, string>();
 
 // Pre-hydrate cache from AsyncStorage
-AsyncStorage.getAllKeys()
+export const hydrationPromise = AsyncStorage.getAllKeys()
   .then((keys) => AsyncStorage.multiGet(keys))
   .then((pairs) => {
     pairs.forEach(([key, value]) => {

@@ -12,6 +12,7 @@ import { queryClient } from '@/api/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { setAuthStoreRef } from '@/api/client';
+import { hydrationPromise } from '@/store/mmkvStore';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Prevent splash screen from auto-hiding before asset/auth loading is complete
@@ -30,6 +31,7 @@ export default function RootLayout() {
 
     const initApp = async () => {
       try {
+        await hydrationPromise;
         await checkAuth();
         // Sync language with i18n
         const lang = i18n.language;
