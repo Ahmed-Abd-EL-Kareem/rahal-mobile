@@ -11,7 +11,8 @@ import {
   ActivityIndicator, 
   Image, 
   StatusBar,
-  Modal
+  Modal,
+  Keyboard
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +62,20 @@ export default function AIScreen() {
       }, 100);
     }
   }, [messages]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setTimeout(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    return () => {
+      showSub.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -345,7 +360,7 @@ export default function AIScreen() {
 
       {/* Chat & Keyboard Canvas (WhatsApp-style dynamic elevation) */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 10 : 0}
         style={{ flex: 1 }}
         className="flex-1"

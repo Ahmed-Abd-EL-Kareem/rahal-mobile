@@ -1,6 +1,16 @@
 // app/(tabs)/index.tsx
 import React, { useState } from 'react';
-import { ScrollView, View, Text, Image, TouchableOpacity, Dimensions, StatusBar, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import {
+  ScrollView,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  Dimensions,
+  StatusBar,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -18,21 +28,24 @@ const MOCK_DESTINATIONS = [
     _id: 'aswan',
     name: { en: 'Aswan', ar: 'أسوان' },
     city: 'Aswan',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANr1ANULo_EwAz_MMCJkf3rMOajiOg2AeVAf9dTqXsYg0f26YJdj55tfWQ2kgdZl3K6aBnc5D0TQa-gQcpQz80jhdYKOqF1Rowa8s2K0zyQmrwQKMvQjZnuM0ndBIJ4--gcNDSH8uysZCjCbKZD9qEbKk5ztuy2gjNlXTzG7clPZSYAgvYJROFH8nWuCt2ohbo6o7Nqcp-RpOSk3_PyWlgmDNIoq0_IZiTLWU1HT2Grg6v_qJ7TXETKNB-k9gn9qwqfEO6GkS2PGI',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuANr1ANULo_EwAz_MMCJkf3rMOajiOg2AeVAf9dTqXsYg0f26YJdj55tfWQ2kgdZl3K6aBnc5D0TQa-gQcpQz80jhdYKOqF1Rowa8s2K0zyQmrwQKMvQjZnuM0ndBIJ4--gcNDSH8uysZCjCbKZD9qEbKk5ztuy2gjNlXTzG7clPZSYAgvYJROFH8nWuCt2ohbo6o7Nqcp-RpOSk3_PyWlgmDNIoq0_IZiTLWU1HT2Grg6v_qJ7TXETKNB-k9gn9qwqfEO6GkS2PGI',
     slug: 'aswan',
   },
   {
     _id: 'luxor',
     name: { en: 'Luxor', ar: 'الأقصر' },
     city: 'Luxor',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuALOlWtHsdN-Fp4Gg8lECqlPJ5aGlE1Xln-czs8_4NPJsosSKa0wIVx7Ux738huv12OjKZMq9arK1e6M9jgTvCsmZ-uJO3Bxay_bkA-wTRFvG-eSDNOD0PDvXY2I5FJ1L5VoWmU64Xfz5wxnkeRp_kqtCMmDBu2IShsvNzYh6E6NXQO1P1NSRF1TuGiuxkz7DSamPtycOoxKKHLO3KMZQXZfmcFkSwBzstXTSPRgcUV9WvtH6GcENyczVXRXZCbRWom9Et20tj3874',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuALOlWtHsdN-Fp4Gg8lECqlPJ5aGlE1Xln-czs8_4NPJsosSKa0wIVx7Ux738huv12OjKZMq9arK1e6M9jgTvCsmZ-uJO3Bxay_bkA-wTRFvG-eSDNOD0PDvXY2I5FJ1L5VoWmU64Xfz5wxnkeRp_kqtCMmDBu2IShsvNzYh6E6NXQO1P1NSRF1TuGiuxkz7DSamPtycOoxKKHLO3KMZQXZfmcFkSwBzstXTSPRgcUV9WvtH6GcENyczVXRXZCbRWom9Et20tj3874',
     slug: 'luxor',
   },
   {
     _id: 'cairo',
     name: { en: 'Cairo', ar: 'القاهرة' },
     city: 'Cairo',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBb1fQ6rmejgurol5zntOzMjyuPm5Ds3iIWFWdDna4BKZ7Of23wam3q6MbcMMylCvQ-ms8vLCr80akuFA3_CyOzBG5EXqbnv3R6RYtuvUjS4WPNeQ_3Cp8UoMxBHWYQcE5_Ip1FwZK12TN6zr68XnTC8krkJAq8tt1N2CHIofov-ifM1SG8_7dYJa7lrFufrIaYefduDdzt0QDs0FWxCgrPnP-NsZ9o6Z9CLyVXPDcHEVt2QJ7PcCBsb36jVgI-S9ac8xHZ7cb27Zw',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBb1fQ6rmejgurol5zntOzMjyuPm5Ds3iIWFWdDna4BKZ7Of23wam3q6MbcMMylCvQ-ms8vLCr80akuFA3_CyOzBG5EXqbnv3R6RYtuvUjS4WPNeQ_3Cp8UoMxBHWYQcE5_Ip1FwZK12TN6zr68XnTC8krkJAq8tt1N2CHIofov-ifM1SG8_7dYJa7lrFufrIaYefduDdzt0QDs0FWxCgrPnP-NsZ9o6Z9CLyVXPDcHEVt2QJ7PcCBsb36jVgI-S9ac8xHZ7cb27Zw',
     slug: 'cairo',
   },
 ];
@@ -45,7 +58,8 @@ const MOCK_HOTELS = [
     stars: 5.0,
     averagePricePerNight: 450,
     currency: 'USD',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCvnq4LZkauJAcisv5B_6YKZoAgRdnXaLzQVqCPHKIxOPWMNy8tWVTIZIRvvw-uWvTg_mpmMssTkWOpG-ibNuQBhqUDwtETHm2v2jsSI5ByElpRE1aBq7qR7umGHE8yVfLX_VWs9x7OQ_7szIkfSWe3Pmr7azrTH-rvRTSP7nrz4LrGck0Tt_e13MTUDLjRpO-SbPNIGCZ2zu5hsokSTT6el4MDEd2gjzv8tGR-tLRVU4L65LjJ31OPZNV1qlifwE970X0fsTU5TSc',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCvnq4LZkauJAcisv5B_6YKZoAgRdnXaLzQVqCPHKIxOPWMNy8tWVTIZIRvvw-uWvTg_mpmMssTkWOpG-ibNuQBhqUDwtETHm2v2jsSI5ByElpRE1aBq7qR7umGHE8yVfLX_VWs9x7OQ_7szIkfSWe3Pmr7azrTH-rvRTSP7nrz4LrGck0Tt_e13MTUDLjRpO-SbPNIGCZ2zu5hsokSTT6el4MDEd2gjzv8tGR-tLRVU4L65LjJ31OPZNV1qlifwE970X0fsTU5TSc',
     slug: 'marriott-mena-house',
   },
   {
@@ -55,7 +69,8 @@ const MOCK_HOTELS = [
     stars: 4.9,
     averagePricePerNight: 520,
     currency: 'USD',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAtA6_ohJ_9Ay4Uv8uB9XqUW_LD96JqGGoNW2RlGi4LEXdONdYSaGqvSIErp0IB0mq_QL2jQ1jBauH9MusKukG_duIxcGkEyHlvkQgH_a903RjyEDPRuC2JI5edo5CVuRHJAtwk2sg5_meBO7RklnEUk1NIeSMR9OeDzyWs2t_vFRuJAmKBY05vqxNKc_1pnqDXH8T-TWL1HXnbaoCS-vPFRUyuMZuK-tpnHtzALVcWWJMTJQN-0gQPgyXWE3Pedipd2X_mklWczcg',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAtA6_ohJ_9Ay4Uv8uB9XqUW_LD96JqGGoNW2RlGi4LEXdONdYSaGqvSIErp0IB0mq_QL2jQ1jBauH9MusKukG_duIxcGkEyHlvkQgH_a903RjyEDPRuC2JI5edo5CVuRHJAtwk2sg5_meBO7RklnEUk1NIeSMR9OeDzyWs2t_vFRuJAmKBY05vqxNKc_1pnqDXH8T-TWL1HXnbaoCS-vPFRUyuMZuK-tpnHtzALVcWWJMTJQN-0gQPgyXWE3Pedipd2X_mklWczcg',
     slug: 'sofitel-old-cataract',
   },
   {
@@ -65,7 +80,8 @@ const MOCK_HOTELS = [
     stars: 5.0,
     averagePricePerNight: 680,
     currency: 'USD',
-    coverImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB9t3T2FsoH71aXgSYw-ThQG3POJwf0xOubac8f2NmpzilPeNOjQM1VHl-sdjE33OOYvJrz-lUhKwhuyikRyLlj1VHz5d23IvFpIx1lR4VDBao_TuRAyaSrjJx2iNJwEad4XeChJYa3PQgnyGZs9omZ8xaLjgFPIayPIhOgGwLVgGHak4bHfFqXAC5jcsXSid9kq-746rFzYsqhpJxzLyVIaC1lwHlsA016Mf_BMXBYGCC9COxcZlpGkXhaABVZXfiuX7FzpS3f5JU',
+    coverImage:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuB9t3T2FsoH71aXgSYw-ThQG3POJwf0xOubac8f2NmpzilPeNOjQM1VHl-sdjE33OOYvJrz-lUhKwhuyikRyLlj1VHz5d23IvFpIx1lR4VDBao_TuRAyaSrjJx2iNJwEad4XeChJYa3PQgnyGZs9omZ8xaLjgFPIayPIhOgGwLVgGHak4bHfFqXAC5jcsXSid9kq-746rFzYsqhpJxzLyVIaC1lwHlsA016Mf_BMXBYGCC9COxcZlpGkXhaABVZXfiuX7FzpS3f5JU',
     slug: 'four-seasons-resort',
   },
 ];
@@ -75,27 +91,26 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { isAuthenticated, logout } = useAuthStore();
-  
+
   const { favoriteDestinations, toggleDestinationFavorite } = useFavoritesStore();
   const [appBarScrolled, setAppBarScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isRTL = i18n.language === 'ar';
 
   // Backend API connection
-  const { data: apiDestinationsResponse, isLoading: isLoadingDestinations } = useDestinations({ limit: 3 });
+  const { data: apiDestinationsResponse, isLoading: isLoadingDestinations } = useDestinations({
+    limit: 3,
+  });
   const { data: apiHotelsResponse, isLoading: isLoadingHotels } = useHotels({ limit: 3 });
 
-  const apiDestinations = apiDestinationsResponse?.pages.flatMap(p => p.data);
-  const apiHotels = apiHotelsResponse?.pages.flatMap(p => p.data);
+  const apiDestinations = apiDestinationsResponse?.pages.flatMap((p) => p.data);
+  const apiHotels = apiHotelsResponse?.pages.flatMap((p) => p.data);
 
   // Use API data if available, fallback to beautiful mocks matching Stitch design
-  const destinations = apiDestinations && apiDestinations.length > 0
-    ? apiDestinations 
-    : MOCK_DESTINATIONS;
+  const destinations =
+    apiDestinations && apiDestinations.length > 0 ? apiDestinations : MOCK_DESTINATIONS;
 
-  const hotels = apiHotels && apiHotels.length > 0 
-    ? apiHotels 
-    : MOCK_HOTELS;
+  const hotels = apiHotels && apiHotels.length > 0 ? apiHotels : MOCK_HOTELS;
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const yOffset = event.nativeEvent.contentOffset.y;
@@ -108,17 +123,23 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        translucent
+        backgroundColor="transparent"
+      />
 
       {/* TopAppBar Shell */}
       <View
-        style={{ 
+        style={{
           paddingTop: (StatusBar.currentHeight || 40) + 4,
-          backgroundColor: appBarScrolled 
-            ? (isDark ? 'rgba(28, 26, 20, 0.95)' : 'rgba(252, 249, 244, 0.95)') 
+          backgroundColor: appBarScrolled
+            ? isDark
+              ? 'rgba(28, 26, 20, 0.95)'
+              : 'rgba(252, 249, 244, 0.95)'
             : 'transparent',
           borderBottomWidth: appBarScrolled ? 1 : 0,
-          borderBottomColor: 'rgba(212, 196, 176, 0.3)'
+          borderBottomColor: 'rgba(212, 196, 176, 0.3)',
         }}
         className="absolute top-0 left-0 right-0 z-50 flex-row justify-between items-center px-6 pb-4 shadow-sm"
       >
@@ -127,10 +148,10 @@ export default function HomeScreen() {
             <Ionicons name="menu" size={24} color="#C8922A" />
           </TouchableOpacity>
           <View className="flex-row items-center gap-2">
-            <Image 
-              source={require('@/assets/logo-2.png')} 
-              style={{ width: 28, height: 28 }} 
-              resizeMode="contain" 
+            <Image
+              source={require('@/assets/logo-2.png')}
+              style={{ width: 28, height: 28 }}
+              resizeMode="contain"
             />
             <Text className="font-headline text-display-lg-mobile text-pharaoh-gold tracking-tight mt-0.5">
               Rahal
@@ -160,8 +181,14 @@ export default function HomeScreen() {
               resizeMode="cover"
             />
             {/* Soft gradient bottom overlay simulation */}
-            <View className="absolute inset-0" style={{ backgroundColor: 'rgba(20, 16, 8, 0.35)' }} />
-            <View className="absolute bottom-0 left-0 right-0 h-[40%]" style={{ backgroundColor: 'rgba(20, 16, 8, 0.25)' }} />
+            <View
+              className="absolute inset-0"
+              style={{ backgroundColor: 'rgba(20, 16, 8, 0.35)' }}
+            />
+            <View
+              className="absolute bottom-0 left-0 right-0 h-[40%]"
+              style={{ backgroundColor: 'rgba(20, 16, 8, 0.25)' }}
+            />
           </View>
 
           {/* Hero Content */}
@@ -169,7 +196,7 @@ export default function HomeScreen() {
             <Text className="font-headline text-display-lg text-white text-center leading-tight mb-6 max-w-sm">
               {t('home.hero.title', 'Discover Egypt, Intelligently')}
             </Text>
-            
+
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/ai')}
               activeOpacity={0.85}
@@ -217,11 +244,17 @@ export default function HomeScreen() {
               <Text className="text-label-sm text-pharaoh-gold uppercase tracking-widest font-bold mb-1">
                 {t('home.destinations.subtitle', "Editor's Choice")}
               </Text>
-              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface" numberOfLines={1}>
+              <Text
+                className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface"
+                numberOfLines={1}
+              >
                 {t('home.destinations.title', 'Popular Destinations')}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} className="flex-row items-center gap-1 shrink-0 pb-0.5">
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/explore')}
+              className="flex-row items-center gap-1 shrink-0 pb-0.5"
+            >
               <Text className="text-label-md text-pharaoh-gold font-bold">
                 {t('home.destinations.cta', 'View All')}
               </Text>
@@ -229,7 +262,11 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-4 -mx-6 px-6 pb-2">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="gap-4 -mx-6 px-6 pb-2"
+          >
             {destinations.map((dest: any) => (
               <TouchableOpacity
                 key={dest._id}
@@ -250,15 +287,24 @@ export default function HomeScreen() {
                     className="absolute top-4 right-4 backdrop-blur-md p-2 rounded-full"
                     style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
                   >
-                    <Ionicons 
-                      name={favoriteDestinations.some(d => d._id === dest._id) ? "heart" : "heart-outline"} 
-                      size={18} 
-                      color={favoriteDestinations.some(d => d._id === dest._id) ? "#BA1A1A" : "#FFFFFF"} 
+                    <Ionicons
+                      name={
+                        favoriteDestinations.some((d) => d._id === dest._id)
+                          ? 'heart'
+                          : 'heart-outline'
+                      }
+                      size={18}
+                      color={
+                        favoriteDestinations.some((d) => d._id === dest._id) ? '#BA1A1A' : '#FFFFFF'
+                      }
                     />
                   </TouchableOpacity>
 
                   {/* Gradient bottom text */}
-                  <View className="absolute bottom-0 left-0 right-0 p-5" style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }}>
+                  <View
+                    className="absolute bottom-0 left-0 right-0 p-5"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)' }}
+                  >
                     <Text className="text-white font-headline text-headline-md-mobile">
                       {isRTL ? dest.name.ar : dest.name.en}
                     </Text>
@@ -276,7 +322,10 @@ export default function HomeScreen() {
               {t('home.features.title', 'Heritage Meets Intelligence')}
             </Text>
             <Text className="text-body-md text-on-surface-variant dark:text-dark-on-surface-variant text-center max-w-sm">
-              {t('home.features.subtitle', 'Leverage our custom AI to curate an Egyptian experience tailored to your historical interests and luxury preferences.')}
+              {t(
+                'home.features.subtitle',
+                'Leverage our custom AI to curate an Egyptian experience tailored to your historical interests and luxury preferences.'
+              )}
             </Text>
           </View>
 
@@ -295,18 +344,27 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-row items-center gap-1 bg-pharaoh-gold/10 px-2 py-0.5 rounded-full">
                     <Ionicons name="sparkles" size={10} color="#C8922A" />
-                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">Insight</Text>
+                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">
+                      Insight
+                    </Text>
                   </View>
                 </View>
                 <Text className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface mb-1">
                   {t('home.features.f1Title', 'AI Trip Planner')}
                 </Text>
                 <Text className="text-label-sm text-on-surface-variant dark:text-dark-on-surface-variant leading-relaxed mb-4">
-                  {t('home.features.f1Desc', 'Personalized multi-city itineraries generated based on your pace and historical curiosity.')}
+                  {t(
+                    'home.features.f1Desc',
+                    'Personalized multi-city itineraries generated based on your pace and historical curiosity.'
+                  )}
                 </Text>
                 <View className="flex-row items-center gap-1.5 mt-auto">
                   <Text className="text-label-sm text-pharaoh-gold font-bold">Explore Plan</Text>
-                  <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={12} color="#C8922A" />
+                  <Ionicons
+                    name={isRTL ? 'arrow-back' : 'arrow-forward'}
+                    size={12}
+                    color="#C8922A"
+                  />
                 </View>
               </TouchableOpacity>
 
@@ -322,18 +380,27 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-row items-center gap-1 bg-pharaoh-gold/10 px-2 py-0.5 rounded-full">
                     <Ionicons name="sparkles" size={10} color="#C8922A" />
-                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">Insight</Text>
+                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">
+                      Insight
+                    </Text>
                   </View>
                 </View>
                 <Text className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface mb-1">
                   {t('home.features.f2Title', 'Smart Hotel Search')}
                 </Text>
                 <Text className="text-label-sm text-on-surface-variant dark:text-dark-on-surface-variant leading-relaxed mb-4">
-                  {t('home.features.f2Desc', 'Find luxury stays near historic sites with AI-vetted views of the Nile or Pyramids.')}
+                  {t(
+                    'home.features.f2Desc',
+                    'Find luxury stays near historic sites with AI-vetted views of the Nile or Pyramids.'
+                  )}
                 </Text>
                 <View className="flex-row items-center gap-1.5 mt-auto">
                   <Text className="text-label-sm text-pharaoh-gold font-bold">Start Search</Text>
-                  <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={12} color="#C8922A" />
+                  <Ionicons
+                    name={isRTL ? 'arrow-back' : 'arrow-forward'}
+                    size={12}
+                    color="#C8922A"
+                  />
                 </View>
               </TouchableOpacity>
             </View>
@@ -352,18 +419,27 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-row items-center gap-1 bg-pharaoh-gold/10 px-2 py-0.5 rounded-full">
                     <Ionicons name="sparkles" size={10} color="#C8922A" />
-                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">Insight</Text>
+                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">
+                      Insight
+                    </Text>
                   </View>
                 </View>
                 <Text className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface mb-1">
                   {t('home.features.f3Title', 'Contextual Guide')}
                 </Text>
                 <Text className="text-label-sm text-on-surface-variant dark:text-dark-on-surface-variant leading-relaxed mb-4">
-                  {t('home.features.f3Desc', 'Point your camera at any monument to receive instant historical narrations in your language.')}
+                  {t(
+                    'home.features.f3Desc',
+                    'Point your camera at any monument to receive instant historical narrations in your language.'
+                  )}
                 </Text>
                 <View className="flex-row items-center gap-1.5 mt-auto">
                   <Text className="text-label-sm text-pharaoh-gold font-bold">Launch Guide</Text>
-                  <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={12} color="#C8922A" />
+                  <Ionicons
+                    name={isRTL ? 'arrow-back' : 'arrow-forward'}
+                    size={12}
+                    color="#C8922A"
+                  />
                 </View>
               </TouchableOpacity>
 
@@ -379,18 +455,27 @@ export default function HomeScreen() {
                   </View>
                   <View className="flex-row items-center gap-1 bg-pharaoh-gold/10 px-2 py-0.5 rounded-full">
                     <Ionicons name="sparkles" size={10} color="#C8922A" />
-                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">Insight</Text>
+                    <Text className="text-[10px] text-pharaoh-gold font-bold uppercase tracking-wider">
+                      Insight
+                    </Text>
                   </View>
                 </View>
                 <Text className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface mb-1">
                   {t('home.features.f4Title', 'Gastronomy AI')}
                 </Text>
                 <Text className="text-label-sm text-on-surface-variant dark:text-dark-on-surface-variant leading-relaxed mb-4">
-                  {t('home.features.f4Desc', 'Discover the finest Egyptian culinary spots from hidden street gems to fine dining.')}
+                  {t(
+                    'home.features.f4Desc',
+                    'Discover the finest Egyptian culinary spots from hidden street gems to fine dining.'
+                  )}
                 </Text>
                 <View className="flex-row items-center gap-1.5 mt-auto">
                   <Text className="text-label-sm text-pharaoh-gold font-bold">Find Dining</Text>
-                  <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={12} color="#C8922A" />
+                  <Ionicons
+                    name={isRTL ? 'arrow-back' : 'arrow-forward'}
+                    size={12}
+                    color="#C8922A"
+                  />
                 </View>
               </TouchableOpacity>
             </View>
@@ -404,11 +489,17 @@ export default function HomeScreen() {
               <Text className="text-label-sm text-pharaoh-gold uppercase tracking-widest font-bold mb-1">
                 {t('home.hotels.subtitle', 'Exquisite Stays')}
               </Text>
-              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface" numberOfLines={1}>
+              <Text
+                className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface"
+                numberOfLines={1}
+              >
                 {t('home.hotels.title', 'Curated Hotels')}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/hotel')} className="flex-row items-center gap-1 shrink-0 pb-0.5">
+            <TouchableOpacity
+              onPress={() => router.push('/hotel')}
+              className="flex-row items-center gap-1 shrink-0 pb-0.5"
+            >
               <Text className="text-label-md text-pharaoh-gold font-bold">
                 {t('common.seeAll', 'View Stays')}
               </Text>
@@ -416,7 +507,11 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-6 -mx-6 px-6 pb-4">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="gap-6 -mx-6 px-6 pb-4"
+          >
             {hotels.map((hotel: any) => (
               <View
                 key={hotel._id}
@@ -441,7 +536,10 @@ export default function HomeScreen() {
                 {/* Hotel Info */}
                 <View className="p-5">
                   <View className="flex-row justify-between items-start mb-2">
-                    <Text className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface max-w-[200px]" numberOfLines={1}>
+                    <Text
+                      className="font-headline text-body-lg text-on-surface dark:text-dark-on-surface max-w-[200px]"
+                      numberOfLines={1}
+                    >
                       {isRTL ? hotel.name.ar : hotel.name.en}
                     </Text>
                     <View className="flex-row items-center gap-1 text-pharaoh-gold">
@@ -500,31 +598,32 @@ export default function HomeScreen() {
       {isMenuOpen && (
         <View className="absolute inset-0 z-[100] flex-row">
           {/* Backdrop */}
-          <TouchableOpacity 
-            activeOpacity={1} 
+          <TouchableOpacity
+            activeOpacity={1}
             onPress={() => setIsMenuOpen(false)}
             className="absolute inset-0"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
           />
-          
+
           {/* Menu Drawer Content */}
-          <View 
+          <View
             className="w-[75%] max-w-[300px] h-full shadow-2xl p-6 justify-between border-r"
-            style={{ 
+            style={{
               backgroundColor: isDark ? '#1C1A14' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(80, 69, 54, 0.2)' : 'rgba(212, 196, 176, 0.3)'
+              borderColor: isDark ? 'rgba(80, 69, 54, 0.2)' : 'rgba(212, 196, 176, 0.3)',
             }}
           >
             <View>
               {/* Drawer Header */}
               <View className="flex-row justify-between items-center mb-8 mt-4">
                 <View className="flex-row items-center gap-2">
-                  <View className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5" style={{ borderColor: '#C8922A' }}>
+                  <View
+                    className="w-10 h-10 rounded-full border flex items-center justify-center p-0.5"
+                    style={{ borderColor: '#C8922A' }}
+                  >
                     <Ionicons name="compass" size={20} color="#C8922A" />
                   </View>
-                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">
-                    Rahal
-                  </Text>
+                  <Text className="font-headline text-body-lg text-pharaoh-gold mt-0.5">Rahal</Text>
                 </View>
                 <TouchableOpacity onPress={() => setIsMenuOpen(false)}>
                   <Ionicons name="close" size={24} color="#817565" />
@@ -535,11 +634,31 @@ export default function HomeScreen() {
               <View className="gap-1">
                 {[
                   { label: t('common.nav.home', 'Home'), icon: 'home-outline', route: '/(tabs)' },
-                  { label: t('common.nav.destinations', 'Explore'), icon: 'compass-outline', route: '/(tabs)/explore' },
-                  { label: t('common.nav.hotels', 'Hotels'), icon: 'business-outline', route: '/(tabs)/hotel' },
-                  { label: t('common.nav.planner', 'AI Planner'), icon: 'sparkles-outline', route: '/(tabs)/ai' },
-                  { label: t('common.nav.trips', 'My Trips'), icon: 'map-outline', route: '/(tabs)/trips' },
-                  { label: t('common.nav.profile', 'Profile'), icon: 'person-outline', route: '/(tabs)/profile' },
+                  {
+                    label: t('common.nav.destinations', 'Explore'),
+                    icon: 'compass-outline',
+                    route: '/(tabs)/explore',
+                  },
+                  {
+                    label: t('common.nav.hotels', 'Hotels'),
+                    icon: 'business-outline',
+                    route: '/(tabs)/hotel',
+                  },
+                  {
+                    label: t('common.nav.planner', 'AI Planner'),
+                    icon: 'sparkles-outline',
+                    route: '/(tabs)/ai',
+                  },
+                  {
+                    label: t('common.nav.trips', 'My Trips'),
+                    icon: 'map-outline',
+                    route: '/(tabs)/trips',
+                  },
+                  {
+                    label: t('common.nav.profile', 'Profile'),
+                    icon: 'person-outline',
+                    route: '/(tabs)/profile',
+                  },
                 ].map((item, index) => (
                   <TouchableOpacity
                     key={index}
@@ -560,10 +679,16 @@ export default function HomeScreen() {
             </View>
 
             {/* Bottom Section: Language & Logout */}
-            <View className="gap-6 pt-6 border-t" style={{ borderTopColor: colors.outlineVariant + '33' }}>
+            <View
+              className="gap-6 pt-6 border-t"
+              style={{ borderTopColor: colors.outlineVariant + '33' }}
+            >
               {/* Language Switcher */}
               <View className="flex-row justify-between items-center">
-                <Text className="text-label-md font-medium" style={{ color: colors.onSurfaceVariant }}>
+                <Text
+                  className="text-label-md font-medium"
+                  style={{ color: colors.onSurfaceVariant }}
+                >
                   {t('common.language', 'Language')}
                 </Text>
                 <TouchableOpacity
