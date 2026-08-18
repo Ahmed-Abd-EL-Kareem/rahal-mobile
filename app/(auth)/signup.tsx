@@ -310,8 +310,8 @@ export default function SignupScreen() {
           {/* Google Button */}
           <TouchableOpacity
             onPress={() => promptAsync()}
-            disabled={!request || isAuthenticating}
-            style={[styles.googleButton, (!request || isAuthenticating) && { opacity: 0.6 }]}
+            disabled={isAuthenticating}
+            style={[styles.googleButton, isAuthenticating && { opacity: 0.6 }]}
           >
             {isAuthenticating ? (
               <ActivityIndicator color="#C8922A" size="small" />

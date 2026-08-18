@@ -76,11 +76,11 @@ export function useGoogleAuth() {
     }
 
     try {
-      if (!request) {
-        showToast({ type: 'error', message: 'Google Auth is initializing. Please try again.' });
-        return;
+      if (promptAsync) {
+        await promptAsync();
+      } else {
+        showToast({ type: 'error', message: 'Google Sign-In is not ready. Please try again.' });
       }
-      await promptAsync();
     } catch (err: any) {
       showToast({ type: 'error', message: err?.message || 'Failed to launch Google Sign-In' });
     }

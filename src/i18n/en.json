@@ -189,7 +189,7 @@
     "destinations": {
       "subtitle": "Discovery",
       "title": "Explore Egypt's Wonders",
-      "cta": "View All Destinations",
+      "cta": "View All",
       "cairo": { "name": "Cairo", "tag": "The City of a Thousand Minarets" },
       "luxor": { "name": "Luxor", "tag": "World's Greatest Open-Air Museum" },
       "aswan": { "name": "Aswan", "tag": "Nubian Serenity & Nile Sails" },
