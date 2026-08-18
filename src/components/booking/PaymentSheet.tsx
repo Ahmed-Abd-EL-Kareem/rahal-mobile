@@ -28,7 +28,7 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
       try {
         // In a real app, you'd fetch the payment intent client secret from your backend
         // For now, we'll simulate this
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/payments/booking/pay/checkout`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/payments/pay/checkout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

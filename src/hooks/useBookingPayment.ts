@@ -17,7 +17,7 @@ export function useBookingPayment() {
 
   const createCheckout = useMutation({
     mutationFn: async (params: { bookingId: string; currency: string }) => {
-      return api.post('payments/booking/pay/checkout', { json: params }).json<{
+      return api.post('payments/pay/checkout', { json: params }).json<{
         status: 'success';
         data: { url: string; sessionId: string; amount: number; currency: string; bookingId: string };
       }>();
@@ -77,7 +77,7 @@ export function useSubscriptionUpgrade() {
 export function useBookingPaymentStatus(bookingId: string) {
   return useQuery({
     queryKey: queryKeys.paymentStatus(bookingId),
-    queryFn: () => api.get(`payments/booking/status/${bookingId}`).json<{
+    queryFn: () => api.get(`payments/pay/status/${bookingId}`).json<{
       status: 'success';
       data: {
         bookingId: string;

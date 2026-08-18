@@ -102,14 +102,14 @@ export function useCancelBooking() {
 export function useBookingPayment(bookingId: string) {
   return useMutation({
     mutationFn: (currency?: string) => 
-      api.post('payments/booking/pay/checkout', { json: { bookingId, currency } }).json<{ status: 'success'; data: { url: string; sessionId: string; amount: number; currency: string; bookingId: string }; message: string }>(),
+      api.post('payments/pay/checkout', { json: { bookingId, currency } }).json<{ status: 'success'; data: { url: string; sessionId: string; amount: number; currency: string; bookingId: string }; message: string }>(),
   });
 }
 
 export function useBookingPaymentStatus(bookingId: string) {
   return useQuery({
     queryKey: queryKeys.paymentStatus(bookingId),
-    queryFn: () => api.get(`payments/booking/status/${bookingId}`).json<{ status: 'success'; data: any }>(),
+    queryFn: () => api.get(`payments/pay/status/${bookingId}`).json<{ status: 'success'; data: any }>(),
     enabled: !!bookingId,
     refetchInterval: 3000,
     retry: 10,
