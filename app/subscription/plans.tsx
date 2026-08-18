@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { usePlans, useUpgradeSubscription } from '@/api/hooks/useSubscriptions';
+import { usePlans } from '@/api/hooks/useSubscriptions';
+import { useSubscriptionUpgrade } from '@/hooks/useBookingPayment';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 
@@ -17,7 +18,7 @@ export default function SubscriptionPlansScreen() {
   const { showToast } = useUIStore();
   
   const { data: plansResponse, isLoading } = usePlans();
-  const { mutateAsync: upgradeSubscription, isPending: isUpgrading } = useUpgradeSubscription();
+  const { upgrade: upgradeSubscription, isPending: isUpgrading } = useSubscriptionUpgrade();
   
   const [selectedCycle, setSelectedCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
@@ -38,10 +39,12 @@ export default function SubscriptionPlansScreen() {
 
     setUpgradingPlan(planName);
     try {
-      await upgradeSubscription(planName);
-      showToast({ type: 'success', message: 'Redirecting to payment...' });
+      const result = await upgradeSubscription(planName);
+      if (result?.success) {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Upgrade failed' });
+      // Toast already shown in hook
     } finally {
       setUpgradingPlan(null);
     }

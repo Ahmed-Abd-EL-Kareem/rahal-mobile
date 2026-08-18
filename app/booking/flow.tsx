@@ -54,7 +54,7 @@ export default function BookingFlowScreen() {
   const { data: hotelResponse, isLoading } = useHotel(params.hotelId || '');
   const hotel = hotelResponse?.data;
   const createBooking = useCreateBooking();
-  const { createCheckout, isPending: isStripePending } = useBookingPayment();
+  const { payBookingWithStripe, isPending: isStripePending } = useBookingPayment();
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
@@ -195,12 +195,18 @@ export default function BookingFlowScreen() {
 
         if (paymentMethod === 'stripe') {
           try {
-            await createCheckout({
+            const stripeResult = await payBookingWithStripe({
               bookingId,
               currency: hotel?.currency || 'USD',
             });
+            if (stripeResult?.canceled) {
+              Alert.alert(
+                t('booking.flow.paymentPending', 'Reservation Saved'),
+                t('booking.flow.paymentPendingDesc', 'Your booking has been saved. You can complete the payment in My Trips at any time.')
+              );
+            }
           } catch (stripeErr) {
-            console.log('Stripe checkout finished or dismissed:', stripeErr);
+            console.log('Stripe PaymentSheet dismissed or failed:', stripeErr);
           }
         }
 
