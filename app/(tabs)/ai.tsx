@@ -10,13 +10,15 @@ import {
   Platform, 
   ActivityIndicator, 
   Image, 
-  StatusBar 
+  StatusBar,
+  Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAIChat } from '@/hooks/useAIChat';
+import { useAISessionStore, ChatSession } from '@/store/aiSessionStore';
 import { useTheme } from '@/hooks/useTheme';
 import { Badge } from '@/components/ui/Badge';
 
@@ -31,10 +33,26 @@ export default function AIScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { sendMessage, isLoading, messages } = useAIChat();
+  const { 
+    sendMessage, 
+    isLoading, 
+    messages, 
+    currentChatId, 
+    createSession, 
+    setCurrentSession, 
+    deleteSession 
+  } = useAIChat();
+  
+  const chatSessionsMap = useAISessionStore((state) => state.chatSessions);
   const [input, setInput] = useState('');
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  const isRTL = i18n.language === 'ar';
+  const sessionsList: ChatSession[] = Array.from(chatSessionsMap.values()).sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -54,6 +72,19 @@ export default function AIScreen() {
   const handleSuggestion = (key: string) => {
     setInput(t(`home.chatbot.${key}`));
     inputRef.current?.focus();
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  };
+
+  const handleStartNewChat = () => {
+    createSession();
+    setIsHistoryOpen(false);
+  };
+
+  const handleSelectSession = (sessionId: string) => {
+    setCurrentSession(sessionId);
+    setIsHistoryOpen(false);
   };
 
   const formatTime = (date: any) => {
@@ -63,9 +94,19 @@ export default function AIScreen() {
     const minutes = d.getMinutes();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
+    hours = hours ? hours : 12;
     const minStr = minutes < 10 ? '0' + minutes : minutes;
     return `${hours}:${minStr} ${ampm}`;
+  };
+
+  const formatDateLabel = (dateStr: any) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return t('common.today', 'Today');
+    if (diffDays === 1) return t('common.yesterday', 'Yesterday');
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
   // Basic Markdown Bold & Italic Parser
@@ -285,29 +326,39 @@ export default function AIScreen() {
 
         {/* Header Options */}
         <View className="flex-row gap-1">
-          <TouchableOpacity className="w-9 h-9 items-center justify-center rounded-full active:scale-90">
-            <Ionicons name="time-outline" size={20} color="#817565" />
+          {/* View History Button */}
+          <TouchableOpacity 
+            onPress={() => setIsHistoryOpen(true)}
+            className="w-9 h-9 items-center justify-center rounded-full active:scale-90 bg-pharaoh-gold/10"
+          >
+            <Ionicons name="time-outline" size={20} color="#C8922A" />
           </TouchableOpacity>
-          <TouchableOpacity className="w-9 h-9 items-center justify-center rounded-full active:scale-90">
-            <Ionicons name="ellipsis-vertical" size={20} color="#817565" />
+          {/* New Chat Button */}
+          <TouchableOpacity 
+            onPress={handleStartNewChat}
+            className="w-9 h-9 items-center justify-center rounded-full active:scale-90 bg-pharaoh-gold/10"
+          >
+            <Ionicons name="create-outline" size={20} color="#C8922A" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Chat & Keyboard Canvas */}
+      {/* Chat & Keyboard Canvas (WhatsApp-style dynamic elevation) */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 10 : 0}
         style={{ flex: 1 }}
         className="flex-1"
       >
         {/* Chat Conversation Canvas */}
         <ScrollView
           ref={scrollRef}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ 
             paddingTop: 16,
             paddingBottom: 24, 
-            paddingHorizontal: 16 
+            paddingHorizontal: 16,
+            flexGrow: 1,
           }}
           showsVerticalScrollIndicator={false}
           className="flex-1 z-10"
@@ -418,14 +469,22 @@ export default function AIScreen() {
             style={{ backgroundColor: colors['surface-container-high'], borderColor: colors.outlineVariant + '33' }}
             className="rounded-full p-1.5 flex-row items-center shadow-lg border"
           >
-            <TouchableOpacity className="w-9 h-9 items-center justify-center rounded-full active:scale-95">
-              <Ionicons name="add-circle" size={24} color="#817565" />
+            <TouchableOpacity 
+              onPress={handleStartNewChat}
+              className="w-9 h-9 items-center justify-center rounded-full active:scale-95"
+            >
+              <Ionicons name="add-circle" size={24} color="#C8922A" />
             </TouchableOpacity>
 
             <TextInput
               ref={inputRef}
               value={input}
               onChangeText={setInput}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollRef.current?.scrollToEnd({ animated: true });
+                }, 150);
+              }}
               placeholder={t('home.chatbot.mockPlaceholder')}
               placeholderTextColor={isDark ? '#9C8F7C' : '#A99F92'}
               className="flex-1 px-3 text-on-surface dark:text-dark-on-surface font-body-md text-sm py-1 h-9"
@@ -434,10 +493,6 @@ export default function AIScreen() {
             />
 
             <View className="flex-row items-center gap-1">
-              <TouchableOpacity className="w-9 h-9 items-center justify-center rounded-full active:scale-95">
-                <Ionicons name="mic" size={20} color="#1B4B6E" />
-              </TouchableOpacity>
-              
               <TouchableOpacity 
                 onPress={handleSend} 
                 disabled={!input.trim() || isLoading} 
@@ -459,6 +514,128 @@ export default function AIScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Chat History Slide-Up Modal */}
+      <Modal
+        visible={isHistoryOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsHistoryOpen(false)}
+      >
+        <View className="flex-1 justify-end bg-black/60">
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={() => setIsHistoryOpen(false)} 
+            className="flex-1"
+          />
+          
+          <View 
+            style={{ 
+              backgroundColor: isDark ? '#1C1A14' : '#FFFFFF',
+              borderTopColor: colors.outlineVariant + '33',
+              maxHeight: '80%',
+              paddingBottom: Math.max(insets.bottom, 20)
+            }}
+            className="rounded-t-3xl border-t p-6 shadow-2xl"
+          >
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center pb-4 border-b border-outline-variant/20 mb-4">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="time-outline" size={22} color="#C8922A" />
+                <Text className="font-headline text-xl text-on-surface dark:text-dark-on-surface">
+                  {t('home.chatbot.historyTitle', 'Chat History')}
+                </Text>
+              </View>
+              
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  onPress={handleStartNewChat}
+                  className="bg-pharaoh-gold/15 px-3 py-1.5 rounded-full flex-row items-center gap-1 active:scale-95"
+                >
+                  <Ionicons name="add" size={16} color="#C8922A" />
+                  <Text className="text-pharaoh-gold font-bold text-xs">
+                    {t('home.chatbot.newChat', 'New Chat')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  onPress={() => setIsHistoryOpen(false)}
+                  className="w-8 h-8 items-center justify-center rounded-full bg-surface-container"
+                >
+                  <Ionicons name="close" size={20} color={colors.onSurfaceVariant} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Sessions List */}
+            <ScrollView showsVerticalScrollIndicator={false} className="max-h-[400px]">
+              {sessionsList.length === 0 ? (
+                <View className="py-12 items-center justify-center">
+                  <Ionicons name="chatbubbles-outline" size={40} color="#817565" style={{ opacity: 0.5 }} />
+                  <Text className="text-on-surface-variant dark:text-outline text-sm mt-3 text-center">
+                    {t('home.chatbot.noHistory', 'No past conversations yet. Start a new AI journey!')}
+                  </Text>
+                </View>
+              ) : (
+                <View className="gap-2.5">
+                  {sessionsList.map((session) => {
+                    const firstUserMsg = session.messages.find(m => m.role === 'user');
+                    const previewText = firstUserMsg?.content || t('home.chatbot.untitledChat', 'New Consultation');
+                    const isSelected = session.id === currentChatId;
+
+                    return (
+                      <TouchableOpacity
+                        key={session.id}
+                        onPress={() => handleSelectSession(session.id)}
+                        activeOpacity={0.8}
+                        style={{
+                          backgroundColor: isSelected 
+                            ? 'rgba(200, 146, 42, 0.12)' 
+                            : (isDark ? '#26241E' : '#F6F3EE'),
+                          borderColor: isSelected ? '#C8922A' : 'transparent',
+                        }}
+                        className="p-3.5 rounded-2xl border flex-row items-center justify-between"
+                      >
+                        <View className="flex-1 pr-3">
+                          <Text 
+                            numberOfLines={1} 
+                            className={`text-sm ${isSelected ? 'font-bold text-pharaoh-gold' : 'font-medium text-on-surface dark:text-dark-on-surface'}`}
+                          >
+                            {previewText}
+                          </Text>
+                          <View className="flex-row items-center gap-2 mt-1">
+                            <Text className="text-[11px] text-outline">
+                              {formatDateLabel(session.updatedAt)}
+                            </Text>
+                            <Text className="text-[11px] text-outline">•</Text>
+                            <Text className="text-[11px] text-outline">
+                              {session.messages.length} {t('home.chatbot.messagesCount', 'messages')}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View className="flex-row items-center gap-1">
+                          {isSelected && (
+                            <View className="bg-pharaoh-gold px-2 py-0.5 rounded-full mr-1">
+                              <Text className="text-[9px] text-white font-bold uppercase">Active</Text>
+                            </View>
+                          )}
+                          <TouchableOpacity
+                            onPress={() => deleteSession(session.id)}
+                            className="p-1.5 active:scale-90"
+                          >
+                            <Ionicons name="trash-outline" size={16} color="#BA1A1A" />
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

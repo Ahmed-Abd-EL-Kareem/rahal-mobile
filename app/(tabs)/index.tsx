@@ -206,15 +206,15 @@ export default function HomeScreen() {
         {/* Popular Destinations */}
         <View className="mt-12 px-6">
           <View className="flex-row justify-between items-end mb-6">
-            <View>
+            <View className="flex-1 mr-3">
               <Text className="text-label-sm text-pharaoh-gold uppercase tracking-widest font-bold mb-1">
                 {t('home.destinations.subtitle', "Editor's Choice")}
               </Text>
-              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface">
+              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface" numberOfLines={1}>
                 {t('home.destinations.title', 'Popular Destinations')}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} className="flex-row items-center gap-1">
+            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} className="flex-row items-center gap-1 shrink-0 pb-0.5">
               <Text className="text-label-md text-pharaoh-gold font-bold">
                 {t('home.destinations.cta', 'View All')}
               </Text>
@@ -393,15 +393,15 @@ export default function HomeScreen() {
         {/* Curated Hotels */}
         <View className="mt-12 px-6">
           <View className="flex-row justify-between items-end mb-6">
-            <View>
+            <View className="flex-1 mr-3">
               <Text className="text-label-sm text-pharaoh-gold uppercase tracking-widest font-bold mb-1">
                 {t('home.hotels.subtitle', 'Exquisite Stays')}
               </Text>
-              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface">
+              <Text className="font-headline text-headline-md text-on-surface dark:text-dark-on-surface" numberOfLines={1}>
                 {t('home.hotels.title', 'Curated Hotels')}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/hotel')} className="flex-row items-center gap-1">
+            <TouchableOpacity onPress={() => router.push('/hotel')} className="flex-row items-center gap-1 shrink-0 pb-0.5">
               <Text className="text-label-md text-pharaoh-gold font-bold">
                 {t('common.seeAll', 'View Stays')}
               </Text>

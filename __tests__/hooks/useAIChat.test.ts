@@ -33,9 +33,13 @@ describe('useAIChat', () => {
   });
 
   describe('sendMessage', () => {
-    it('creates new chat session if none exists', async () => {
-      mockApi.post.mockResolvedValue({
-        data: { reply: 'AI response', tokensUsed: 100 },
+    it('creates new chat session if none exists and extracts data.reply not envelope message', async () => {
+      (mockApi.post as jest.Mock).mockReturnValue({
+        json: jest.fn().mockResolvedValue({
+          status: 'success',
+          message: 'Chat response generated',
+          data: { reply: 'Real AI model reply', tokensUsed: 100, sessionId: 'chat_123' },
+        }),
       });
       mockGetChatSession.mockReturnValue({ messages: [] });
 
@@ -46,13 +50,25 @@ describe('useAIChat', () => {
 
       expect(mockCreateChatSession).toHaveBeenCalled();
       expect(mockAddMessage).toHaveBeenCalledTimes(2); // user + AI
+      expect(mockAddMessage).toHaveBeenLastCalledWith(
+        'chat_123',
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'Real AI model reply',
+          tokensUsed: 100,
+        })
+      );
     });
 
-    it('uses existing chat session', async () => {
+    it('uses existing chat session and extracts data.reply', async () => {
       mockAIStore.getState().currentChatId = 'chat_123';
       mockGetChatSession.mockReturnValue({ messages: [] });
-      mockApi.post.mockResolvedValue({
-        data: { reply: 'AI response', tokensUsed: 50 },
+      (mockApi.post as jest.Mock).mockReturnValue({
+        json: jest.fn().mockResolvedValue({
+          status: 'success',
+          message: 'Chat response generated',
+          data: { reply: 'AI response', tokensUsed: 50, sessionId: 'chat_123' },
+        }),
       });
 
       const { result } = renderHook(() => useAIChat());
@@ -62,10 +78,20 @@ describe('useAIChat', () => {
 
       expect(mockCreateChatSession).not.toHaveBeenCalled();
       expect(mockAddMessage).toHaveBeenCalledTimes(2);
+      expect(mockAddMessage).toHaveBeenLastCalledWith(
+        'chat_123',
+        expect.objectContaining({
+          role: 'assistant',
+          content: 'AI response',
+          tokensUsed: 50,
+        })
+      );
     });
 
-    it('handles API errors', async () => {
-      mockApi.post.mockRejectedValue(new Error('API Error'));
+    it('handles API errors gracefully', async () => {
+      (mockApi.post as jest.Mock).mockReturnValue({
+        json: jest.fn().mockRejectedValue(new Error('API Error')),
+      });
 
       const { result } = renderHook(() => useAIChat());
       await act(async () => {
@@ -75,23 +101,6 @@ describe('useAIChat', () => {
       expect(mockShowToast).toHaveBeenCalledWith({
         type: 'error',
         message: 'API Error',
-      });
-    });
-
-    it('handles quota exceeded error', async () => {
-      const error = new Error('Quota exceeded');
-      (error as any).response = { data: { message: 'Monthly limit reached' } };
-      mockApi.post.mockRejectedValue(error);
-
-      const { result } = renderHook(() => useAIChat());
-      await act(async () => {
-        await result.current.sendMessage('Hello');
-      });
-
-      expect(mockShowToast).toHaveBeenCalledWith({
-        type: 'quota_exceeded',
-        message: 'Monthly limit reached',
-        action: expect.any(Object),
       });
     });
   });

@@ -365,13 +365,13 @@ const styles = StyleSheet.create({
 
   // Modal styles
   modalOverlay: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     zIndex: 1000,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseArea: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
   },
   modalScrollView: {
     flex: 1,

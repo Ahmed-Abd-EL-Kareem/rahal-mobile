@@ -33,7 +33,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('common.nav.home'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
@@ -42,7 +42,7 @@ export default function TabsLayout() {
         name="explore"
         options={{
           title: t('common.nav.destinations'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="compass-outline" size={size} color={color} />
           ),
         }}
@@ -51,7 +51,7 @@ export default function TabsLayout() {
         name="hotel"
         options={{
           title: t('common.nav.hotels'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="business-outline" size={size} color={color} />
           ),
         }}
@@ -60,7 +60,7 @@ export default function TabsLayout() {
         name="ai"
         options={{
           title: t('common.nav.planner'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="sparkles-outline" size={size} color={color} />
           ),
         }}
@@ -69,7 +69,7 @@ export default function TabsLayout() {
         name="trips"
         options={{
           title: t('common.nav.trips'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
         }}
@@ -78,7 +78,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: t('common.nav.profile'),
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}

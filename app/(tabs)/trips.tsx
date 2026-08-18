@@ -439,11 +439,13 @@ export default function TripsScreen() {
       {isTripsTab && (
         <TouchableOpacity
           onPress={() => router.push('/trip/generate')}
-          style={{ bottom: 84 }}
-          className="absolute right-6 bg-pharaoh-gold flex-row items-center gap-2 px-5 py-3 rounded-full shadow-lg shadow-pharaoh-gold/30 active:scale-90 z-40"
+          activeOpacity={0.85}
+          className="absolute bottom-6 right-6 z-[60] bg-pharaoh-gold p-4 rounded-full shadow-2xl flex-row items-center gap-2"
         >
-          <Ionicons name="sparkles" size={16} color="white" />
-          <Text className="text-white font-bold text-label-md">Generate New Trip</Text>
+          <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+          <Text className="text-white text-label-md font-bold uppercase tracking-wide px-1">
+            Generate Trip
+          </Text>
         </TouchableOpacity>
       )}
 

@@ -1,9 +1,46 @@
 // src/store/mmkvStore.ts
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const storage = createMMKV({ id: 'rahal-storage' });
+// Synchronous in-memory cache backed by AsyncStorage for full Expo Go & Standalone compatibility
+const cache = new Map<string, string>();
 
-interface MMKVStore {
+// Pre-hydrate cache from AsyncStorage
+AsyncStorage.getAllKeys()
+  .then((keys) => AsyncStorage.multiGet(keys))
+  .then((pairs) => {
+    pairs.forEach(([key, value]) => {
+      if (value !== null) {
+        cache.set(key, value);
+      }
+    });
+  })
+  .catch(() => {
+    // Non-fatal fallback to in-memory store
+  });
+
+export const storage = {
+  getString: (key: string): string | undefined => {
+    return cache.get(key);
+  },
+  set: (key: string, value: string | boolean | number): void => {
+    const str = String(value);
+    cache.set(key, str);
+    AsyncStorage.setItem(key, str).catch(() => {});
+  },
+  remove: (key: string): void => {
+    cache.delete(key);
+    AsyncStorage.removeItem(key).catch(() => {});
+  },
+  getAllKeys: (): string[] => {
+    return Array.from(cache.keys());
+  },
+  clearAll: (): void => {
+    cache.clear();
+    AsyncStorage.clear().catch(() => {});
+  },
+};
+
+export interface MMKVStore {
   getString: (key: string) => string | undefined;
   setString: (key: string, value: string) => void;
   delete: (key: string) => void;
