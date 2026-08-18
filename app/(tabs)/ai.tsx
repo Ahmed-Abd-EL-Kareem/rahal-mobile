@@ -55,6 +55,8 @@ export default function AIScreen() {
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
@@ -66,14 +68,22 @@ export default function AIScreen() {
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
+      (e) => {
+        setKeyboardHeight(e.endCoordinates?.height || 0);
         setTimeout(() => {
           scrollRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        }, 80);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
       }
     );
     return () => {
       showSub.remove();
+      hideSub.remove();
     };
   }, []);
 
@@ -360,8 +370,8 @@ export default function AIScreen() {
 
       {/* Chat & Keyboard Canvas (WhatsApp-style dynamic elevation) */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 10 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         style={{ flex: 1 }}
         className="flex-1"
       >
@@ -369,6 +379,8 @@ export default function AIScreen() {
         <ScrollView
           ref={scrollRef}
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => scrollRef.current?.scrollToEnd({ animated: true })}
           contentContainerStyle={{ 
             paddingTop: 16,
             paddingBottom: 24, 
@@ -449,35 +461,37 @@ export default function AIScreen() {
         {/* Bottom Interaction Area */}
         <View 
           style={{ 
-            paddingBottom: Math.max(insets.bottom, 12),
+            paddingBottom: keyboardHeight > 0 ? (Platform.OS === 'android' ? 8 : 10) : Math.max(insets.bottom, 12),
             backgroundColor: colors.background + 'F2',
             borderTopColor: colors.outlineVariant + '1A',
           }} 
           className="px-4 pt-3 border-t z-40"
         >
-          {/* Suggestion Chips */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={{ paddingHorizontal: 2, gap: 10 }}
-            className="pb-3"
-          >
-            {SUGGESTIONS.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                onPress={() => handleSuggestion(s.key)}
-                style={{ backgroundColor: colors['surface-container-low'], borderColor: colors.primary + '40' }}
-                className="border rounded-full px-4 py-2 flex-row items-center active:scale-95 shadow-sm"
-              >
-                <View className="mr-1.5">
-                  <Ionicons name={s.icon as any} size={15} color="#C8922A" />
-                </View>
-                <Text className="text-pharaoh-gold font-bold text-xs tracking-wide">
-                  {t(`home.chatbot.${s.key}`)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {/* Suggestion Chips (only when keyboard is closed) */}
+          {keyboardHeight === 0 && (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ paddingHorizontal: 2, gap: 10 }}
+              className="pb-3"
+            >
+              {SUGGESTIONS.map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  onPress={() => handleSuggestion(s.key)}
+                  style={{ backgroundColor: colors['surface-container-low'], borderColor: colors.primary + '40' }}
+                  className="border rounded-full px-4 py-2 flex-row items-center active:scale-95 shadow-sm"
+                >
+                  <View className="mr-1.5">
+                    <Ionicons name={s.icon as any} size={15} color="#C8922A" />
+                  </View>
+                  <Text className="text-pharaoh-gold font-bold text-xs tracking-wide">
+                    {t(`home.chatbot.${s.key}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* Chat Input Bar */}
           <View 
@@ -498,12 +512,13 @@ export default function AIScreen() {
               onFocus={() => {
                 setTimeout(() => {
                   scrollRef.current?.scrollToEnd({ animated: true });
-                }, 150);
+                }, 100);
               }}
               placeholder={t('home.chatbot.mockPlaceholder')}
               placeholderTextColor={isDark ? '#9C8F7C' : '#A99F92'}
-              className="flex-1 px-3 text-on-surface dark:text-dark-on-surface font-body-md text-sm py-1 h-9"
+              className="flex-1 px-3 text-on-surface dark:text-dark-on-surface font-body-md text-sm py-1 min-h-[36px] max-h-[90px]"
               style={{ color: colors.onSurface }}
+              multiline
               onSubmitEditing={handleSend}
             />
 

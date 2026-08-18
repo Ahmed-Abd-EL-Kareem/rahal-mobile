@@ -40,6 +40,7 @@ export default function HotelDetailScreen() {
   const hotel = hotelResponse?.data;
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
+  const [selectedRoomIndex, setSelectedRoomIndex] = useState<number | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const carouselRef = useRef<ScrollView>(null);
 
@@ -49,11 +50,10 @@ export default function HotelDetailScreen() {
   // Real or fallback rooms
   const roomsList = (hotel?.rooms && hotel.rooms.length > 0) ? hotel.rooms : DEFAULT_ROOMS;
 
-  useEffect(() => {
-    if (roomsList.length > 0 && !selectedRoom) {
-      setSelectedRoom(roomsList[0]);
-    }
-  }, [roomsList]);
+  const handleRoomSelect = (room: any, index: number) => {
+    setSelectedRoom(room);
+    setSelectedRoomIndex(index);
+  };
 
   const handleBook = () => {
     if (!selectedRoom) {
@@ -280,7 +280,7 @@ export default function HotelDetailScreen() {
             <View className="flex-col gap-4">
               {roomsList.map((room: any, idx: number) => {
                 const roomName = room.type || room.name || `Sanctuary Room ${idx + 1}`;
-                const isSelected = selectedRoom?.type === room.type || selectedRoom?.name === room.name;
+                const isSelected = selectedRoomIndex === idx;
                 const roomImage = (room.images && room.images[0]) || MOCK_ROOM_IMAGES[idx % MOCK_ROOM_IMAGES.length];
                 const price = room.pricePerNight || hotel?.averagePricePerNight || 320;
                 
@@ -288,11 +288,12 @@ export default function HotelDetailScreen() {
                   <TouchableOpacity
                     key={idx}
                     activeOpacity={0.85}
-                    onPress={() => setSelectedRoom(room)}
+                    onPress={() => handleRoomSelect(room, idx)}
                     className="flex-row p-4 border rounded-xl overflow-hidden active:scale-[0.99]"
                     style={{ 
                       backgroundColor: isSelected ? (isDark ? '#2C2314' : '#FDF9F0') : colors.surface, 
-                      borderColor: isSelected ? colors.primary : colors.outlineVariant + '48' 
+                      borderColor: isSelected ? '#C8922A' : colors.outlineVariant + '48',
+                      borderWidth: isSelected ? 2 : 1
                     }}
                   >
                     <Image
@@ -374,37 +375,46 @@ export default function HotelDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Booking Bar */}
-      <View 
-        className="absolute bottom-0 left-0 right-0 h-20 border-t px-5 flex-row justify-between items-center shadow-2xl z-50"
-        style={{ backgroundColor: colors.surface, borderTopColor: colors.outlineVariant + '33' }}
-      >
-        <View>
-          <View className="flex-row items-baseline gap-1">
-            <Text className="font-headline text-headline-md text-pharaoh-gold" style={{ color: colors.pharaohGold }}>
-              {selectedRoom 
-                ? formatCurrency(selectedRoom.pricePerNight || hotel?.averagePricePerNight || 320, currency) 
-                : formatCurrency(hotel?.averagePricePerNight || 320, currency)}
+      {/* Sticky Bottom Booking Bar (only visible when a room is picked) */}
+      {selectedRoom ? (
+        <View 
+          className="absolute bottom-0 left-0 right-0 h-20 border-t px-5 flex-row justify-between items-center shadow-2xl z-50"
+          style={{ backgroundColor: colors.surface, borderTopColor: colors.outlineVariant + '33' }}
+        >
+          <View>
+            <View className="flex-row items-baseline gap-1">
+              <Text className="font-headline text-headline-md text-pharaoh-gold" style={{ color: colors.pharaohGold }}>
+                {formatCurrency(selectedRoom.pricePerNight || hotel?.averagePricePerNight || 320, currency)}
+              </Text>
+              <Text className="text-xs font-body" style={{ color: colors.onSurfaceVariant }}>/ {t('hotelListing.perNight', 'night')}</Text>
+            </View>
+            <Text className="text-xs font-body" style={{ color: colors.outline }}>
+              {selectedRoom.type || selectedRoom.name || t('hotelDetail.roomTypes', 'Selected Sanctuary')}
             </Text>
-            <Text className="text-xs font-body" style={{ color: colors.onSurfaceVariant }}>/ {t('hotelListing.perNight', 'night')}</Text>
           </View>
-          <Text className="text-xs font-body" style={{ color: colors.outline }}>
-            {selectedRoom?.type || selectedRoom?.name || t('hotelDetail.roomTypes', 'Selected Sanctuary')}
+
+          <TouchableOpacity
+            onPress={handleBook}
+            className="bg-pharaoh-gold px-8 py-3.5 rounded-full flex-row items-center gap-2 active:scale-95 shadow-lg"
+            style={{ elevation: 4 }}
+          >
+            <Text className="text-white text-label-md font-bold uppercase tracking-wider">
+              {t('hotelDetail.bookNow', 'Book Now')}
+            </Text>
+            <Ionicons name={isRTL ? "arrow-back" : "calendar-outline"} size={16} color="white" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View 
+          className="absolute bottom-0 left-0 right-0 h-16 border-t px-5 flex-row items-center justify-center shadow-md z-50"
+          style={{ backgroundColor: colors.surface, borderTopColor: colors.outlineVariant + '33' }}
+        >
+          <Ionicons name="bed-outline" size={18} color="#C8922A" style={{ marginRight: 8 }} />
+          <Text className="text-sm font-semibold text-center" style={{ color: colors.onSurfaceVariant }}>
+            {t('hotelDetail.selectRoomPrompt', 'Please pick a sanctuary room above to proceed')}
           </Text>
         </View>
-
-        <TouchableOpacity
-          onPress={handleBook}
-          disabled={!selectedRoom}
-          className="bg-pharaoh-gold px-8 py-3.5 rounded-full flex-row items-center gap-2 active:scale-95 shadow-lg"
-          style={{ elevation: 4 }}
-        >
-          <Text className="text-white text-label-md font-bold uppercase tracking-wider">
-            {t('hotelDetail.bookNow', 'Book Now')}
-          </Text>
-          <Ionicons name={isRTL ? "arrow-back" : "calendar-outline"} size={16} color="white" />
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
