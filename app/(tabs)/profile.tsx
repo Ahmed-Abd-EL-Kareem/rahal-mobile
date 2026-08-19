@@ -121,7 +121,14 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={toggleSideMenu} className="p-2 active:scale-95">
             <Ionicons name="menu-outline" size={24} color="#C8922A" />
           </TouchableOpacity>
-          <Text className="text-headline-md-mobile font-headline text-pharaoh-gold">Rahal</Text>
+          <View className="flex-row items-center gap-2">
+            <Image 
+              source={require('@/assets/logo-2.png')} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain" 
+            />
+            <Text className="text-headline-md-mobile font-headline text-pharaoh-gold">Rahal</Text>
+          </View>
         </View>
         <TouchableOpacity onPress={() => router.push('/(tabs)/ai')} className="p-2 active:scale-95">
           <Ionicons name="sparkles-outline" size={22} color="#C8922A" />

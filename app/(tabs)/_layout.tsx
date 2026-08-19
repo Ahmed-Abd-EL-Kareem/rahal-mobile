@@ -15,6 +15,7 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: activeTintColor,
         tabBarInactiveTintColor: inactiveTintColor,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
@@ -60,6 +61,7 @@ export default function TabsLayout() {
         name="ai"
         options={{
           title: t('common.nav.planner'),
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="sparkles-outline" size={size} color={color} />
           ),

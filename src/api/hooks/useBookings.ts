@@ -57,10 +57,29 @@ export function useBooking(id: string) {
   });
 }
 
+export interface CreateBookingRoomInput {
+  room?: string;
+  quantity?: number;
+  guests?: { adults: number; children?: number };
+  roomType?: string;
+  pricePerNight?: number;
+}
+
+export interface CreateBookingInput {
+  hotel: string;
+  checkIn: string;
+  checkOut: string;
+  guests?: number;
+  rooms?: number | CreateBookingRoomInput[];
+  room?: string;
+  trip?: string;
+  specialRequests?: string;
+}
+
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { hotel: string; checkIn: string; checkOut: string; guests: number; rooms: number; trip?: string; specialRequests?: string }) => 
+    mutationFn: (data: CreateBookingInput) => 
       api.post('bookings', { json: data }).json<{ status: 'success'; data: Booking; message: string }>(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -83,14 +102,14 @@ export function useCancelBooking() {
 export function useBookingPayment(bookingId: string) {
   return useMutation({
     mutationFn: (currency?: string) => 
-      api.post('payments/booking/pay/checkout', { json: { bookingId, currency } }).json<{ status: 'success'; data: { url: string; sessionId: string; amount: number; currency: string; bookingId: string }; message: string }>(),
+      api.post('payments/pay/checkout', { json: { bookingId, currency } }).json<{ status: 'success'; data: { url: string; sessionId: string; amount: number; currency: string; bookingId: string }; message: string }>(),
   });
 }
 
 export function useBookingPaymentStatus(bookingId: string) {
   return useQuery({
     queryKey: queryKeys.paymentStatus(bookingId),
-    queryFn: () => api.get(`payments/booking/status/${bookingId}`).json<{ status: 'success'; data: any }>(),
+    queryFn: () => api.get(`payments/pay/status/${bookingId}`).json<{ status: 'success'; data: any }>(),
     enabled: !!bookingId,
     refetchInterval: 3000,
     retry: 10,

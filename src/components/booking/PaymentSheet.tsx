@@ -1,13 +1,14 @@
 // src/components/booking/PaymentSheet.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useStripe, usePaymentSheet } from '@stripe/stripe-react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/hooks/useTheme';
+import { api } from '@/api/client';
 
 interface PaymentSheetProps {
-  amount: number; // in smallest currency unit (e.g., piasters for EGP)
+  amount: number; // in smallest currency unit (e.g., cents/piasters)
   currency: string;
   bookingId: string;
   onSuccess: () => void;
@@ -17,53 +18,72 @@ interface PaymentSheetProps {
 
 export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, onCancel }: PaymentSheetProps) => {
   const { t } = useTranslation();
-  const { colors } = useTheme();
-  const stripe = useStripe();
+  const { colors, isDark } = useTheme();
   const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
       try {
-        // In a real app, you'd fetch the payment intent client secret from your backend
-        // For now, we'll simulate this
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/payments/booking/pay/checkout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        setIsLoading(true);
+        const res = await api.post('payments/booking/pay/intent', {
+          json: {
+            bookingId,
+            currency: currency.toLowerCase(),
           },
-          body: JSON.stringify({ bookingId, currency: currency.toLowerCase() }),
-        });
+        }).json<{
+          status: 'success';
+          data: {
+            paymentIntentClientSecret: string;
+            ephemeralKeySecret: string;
+            customerId: string;
+            amount: number;
+            currency: string;
+            bookingId: string;
+          };
+        }>();
 
-        const data = await response.json();
-        if (data.data?.paymentIntentClientSecret) {
+        if (!isMounted) return;
+
+        if (res.data?.paymentIntentClientSecret) {
           const { error } = await initPaymentSheet({
             merchantDisplayName: 'Rahal Travel',
-            paymentIntentClientSecret: data.data.paymentIntentClientSecret,
-            customerId: data.data.customerId,
-            customerEphemeralKeySecret: data.data.ephemeralKeySecret,
-            style: 'automatic', // or 'automatic' for dark mode
+            paymentIntentClientSecret: res.data.paymentIntentClientSecret,
+            customerId: res.data.customerId,
+            customerEphemeralKeySecret: res.data.ephemeralKeySecret,
+            style: isDark ? 'alwaysDark' : 'alwaysLight',
             returnURL: 'rahal://booking/payment-return',
           });
 
-          if (!error) {
+          if (!error && isMounted) {
             setIsReady(true);
-          } else {
-            console.error('PaymentSheet init error:', error);
-            onError(new Error('Failed to initialize payment'));
+          } else if (error) {
+            console.error('[PaymentSheet] init error:', error);
+            onError(new Error(error.message || 'Failed to initialize payment'));
           }
         }
-      } catch (error) {
-        console.error('Payment init error:', error);
+      } catch (error: any) {
+        if (!isMounted) return;
+        console.error('[PaymentSheet] intent error:', error);
         onError(error as Error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    init();
-  }, [bookingId, currency]);
+    if (bookingId) {
+      init();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [bookingId, currency, isDark]);
 
   const handlePayment = async () => {
     if (!isReady) return;
@@ -72,8 +92,12 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
     const { error } = await presentPaymentSheet();
 
     if (error) {
-      console.error('Payment error:', error);
-      onError(new Error(error.message));
+      if (error.code === 'Canceled') {
+        onCancel();
+      } else {
+        console.error('[PaymentSheet] present error:', error);
+        onError(new Error(error.message));
+      }
     } else {
       onSuccess();
     }
@@ -82,35 +106,41 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
 
   if (isLoading && !isReady) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#C8922A" />
-        <Text style={styles.loadingText}>{t('booking.flow.paymentProcessing')}</Text>
+        <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
+          {t('booking.flow.paymentProcessing', 'Preparing secure payment...')}
+        </Text>
       </View>
     );
   }
 
   if (!isReady) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>{t('booking.flow.paymentUnavailable')}</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
+          {t('booking.flow.paymentUnavailable', 'Payment setup unavailable')}
+        </Text>
         <Button variant="outline" onPress={onCancel} className="mt-4 w-auto">
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Payment Summary</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.summaryCard, { backgroundColor: colors['surface-container-low'], borderColor: colors.outlineVariant + '33' }]}>
+        <Text style={[styles.summaryTitle, { color: colors.onSurface }]}>Payment Summary</Text>
         <View style={styles.summaryRow}>
-          <Text>Amount</Text>
-          <Text style={styles.amountText}>{(amount / 100).toFixed(2)} {currency.toUpperCase()}</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>Amount</Text>
+          <Text style={[styles.amountText, { color: colors.primary }]}>
+            {(amount / 100).toFixed(2)} {currency.toUpperCase()}
+          </Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text>Booking ID</Text>
-          <Text style={{ fontFamily: 'monospace' }}>{bookingId.slice(0, 8)}...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>Booking Reference</Text>
+          <Text style={{ color: colors.onSurface, fontFamily: 'monospace' }}>#{bookingId.slice(0, 8).toUpperCase()}</Text>
         </View>
       </View>
 
@@ -123,8 +153,8 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
       >
         {isLoading ? (
           <>
-            <ActivityIndicator color="#FFFFFF" size="large" style={{ marginRight: 8 }} />
-            <Text>{t('booking.flow.paymentProcessing')}</Text>
+            <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+            <Text>{t('booking.flow.paymentProcessing', 'Processing...')}</Text>
           </>
         ) : (
           <Text>{t('booking.flow.payNow', { amount: (amount / 100).toFixed(2), currency: currency.toUpperCase() })}</Text>
@@ -138,7 +168,7 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
         fullWidth
         className="mt-3"
       >
-        {t('common.cancel')}
+        {t('common.cancel', 'Cancel')}
       </Button>
     </View>
   );
@@ -146,20 +176,18 @@ export const PaymentSheet = ({ amount, currency, bookingId, onSuccess, onError, 
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 24,
     justifyContent: 'center',
   },
   summaryCard: {
-    backgroundColor: '#F0EDE9',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
+    borderWidth: 1,
   },
   summaryTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1C1C19',
+    fontWeight: '700',
     marginBottom: 16,
   },
   summaryRow: {
@@ -170,12 +198,10 @@ const styles = StyleSheet.create({
   amountText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#C8922A',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#504536',
     textAlign: 'center',
   },
 });

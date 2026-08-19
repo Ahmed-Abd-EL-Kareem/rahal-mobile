@@ -20,7 +20,7 @@ const CITIES = [
 
 export default function HotelsScreen() {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, isRTL } = useTheme();
   const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,7 +80,14 @@ export default function HotelsScreen() {
           >
             <Ionicons name="menu-outline" size={24} color="#C8922A" />
           </TouchableOpacity>
-          <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+          <View className="flex-row items-center gap-2">
+            <Image 
+              source={require('@/assets/logo-2.png')} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain" 
+            />
+            <Text className="font-headline text-2xl text-pharaoh-gold font-bold mt-0.5">Rahal</Text>
+          </View>
         </View>
         <TouchableOpacity className="p-2 active:scale-95 transition-transform">
           <Ionicons name="notifications-outline" size={24} color="#C8922A" />
@@ -308,16 +315,20 @@ export default function HotelsScreen() {
         renderItem={({ item: hotel }) => {
           const isFav = favoriteHotels.some(h => h._id === hotel._id);
           const mockRating = (4.5 + (hotel.stars * 0.08)).toFixed(1);
+          const hotelName = (hotel.name && typeof hotel.name === 'object')
+            ? (hotel.name[i18n.language === 'ar' ? 'ar' : 'en'] || hotel.name.en || '')
+            : (hotel.name || '');
 
           return (
-            <View className="p-4 md:p-10 max-w-[1600px] mx-auto w-full py-2">
-              <Card 
-                key={hotel._id} 
-                className="p-0 overflow-hidden border rounded-xl shadow-resting"
+            <View className="px-4 md:px-10 max-w-[1600px] mx-auto w-full py-2">
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => router.push(`/hotel/${hotel.slug || hotel._id}`)}
+                className="rounded-xl overflow-hidden shadow-resting border active:scale-[0.99]"
                 style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
               >
                 {/* Cover Image and Badge overlays */}
-                <View className="relative h-64 w-full">
+                <View className="relative h-60 w-full bg-surface-container">
                   {hotel.coverImage ? (
                     <Image
                       source={{ uri: hotel.coverImage }}
@@ -332,61 +343,69 @@ export default function HotelsScreen() {
                   
                   {/* Top-Left Rahal Choice Badge */}
                   {hotel.stars === 5 && (
-                    <View className="absolute top-4 left-4 bg-pharaoh-gold px-3 py-1 rounded-full flex-row items-center gap-1 shadow-md">
+                    <View className="absolute top-3 left-3 bg-pharaoh-gold/90 backdrop-blur-md px-3 py-1 rounded-full flex-row items-center gap-1 shadow-md">
                       <Ionicons name="sparkles" size={12} color="white" />
-                      <Text className="text-white text-label-sm uppercase tracking-wider">Rahal Choice</Text>
+                      <Text className="text-white text-label-sm uppercase tracking-wider font-bold">
+                        {t('hotelListing.rahalChoice', 'Rahal Choice')}
+                      </Text>
                     </View>
                   )}
 
                   {/* Top-Right Favorite Button */}
                   <TouchableOpacity
-                    onPress={() => toggleFavorite(hotel)}
-                    className="absolute top-4 right-4 backdrop-blur-md p-2 rounded-full shadow-sm"
-                    style={{ backgroundColor: isDark ? 'rgba(28, 26, 20, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(hotel);
+                    }}
+                    className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md items-center justify-center active:scale-110 shadow-sm"
                   >
                     <Ionicons name={isFav ? "heart" : "heart-outline"} size={20} color={isFav ? "#BA1A1A" : colors.onSurfaceVariant} />
                   </TouchableOpacity>
+
+                  {/* Bottom-Left Price Tier Badge */}
+                  <View className="absolute bottom-3 left-3 bg-obsidian/70 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20">
+                    <Text className="text-white font-label-sm text-[12px] font-bold">
+                      <Text className="text-pharaoh-gold">{formatCurrency(hotel.averagePricePerNight, hotel.currency)}</Text>
+                      <Text className="text-white/80 font-normal"> / {t('hotelListing.perNight', 'night')}</Text>
+                    </Text>
+                  </View>
+
+                  {/* Bottom-Right Rating Badge */}
+                  <View className="absolute bottom-3 right-3 bg-obsidian/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 flex-row items-center gap-1">
+                    <Ionicons name="star" size={12} color="#C8922A" />
+                    <Text className="text-white font-label-sm text-[12px]">
+                      {mockRating} ({hotel.stars}★)
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Card Content Details */}
                 <CardContent className="p-5">
                   <View className="flex-row justify-between items-start mb-2">
-                    <View className="flex-1 pr-4">
-                      <Text className="text-headline-md-mobile font-headline mb-1" style={{ color: colors.onSurface }}>
-                        {hotel.name.en}
+                    <View className="flex-1 pr-2">
+                      <Text className="text-headline-md-mobile font-headline font-semibold mb-1 text-left" style={{ color: colors.onSurface }}>
+                        {hotelName}
                       </Text>
                       <View className="flex-row items-center gap-1">
                         <Ionicons name="location-outline" size={14} color={colors.onSurfaceVariant} />
-                        <Text className="text-body-md font-body" style={{ color: colors.outline }}>{hotel.city}, Egypt</Text>
+                        <Text className="text-body-md font-body text-left" style={{ color: colors.outline }}>
+                          {hotel.city}, Egypt
+                        </Text>
                       </View>
-                    </View>
-                    <View className="flex-row items-center gap-1 bg-pharaoh-gold/10 px-2 py-1 rounded-lg">
-                      <Ionicons name="star" size={14} color="#C8922A" />
-                      <Text className="text-pharaoh-gold font-bold text-label-sm">{mockRating}</Text>
                     </View>
                   </View>
 
                   <View 
-                    className="flex-row justify-between items-end mt-6 border-t pt-4"
-                    style={{ borderTopColor: colors.outlineVariant + '33' }}
+                    className="flex-row justify-between items-center mt-4 border-t pt-3"
+                    style={{ borderTopColor: colors.outlineVariant + '25' }}
                   >
-                    <View>
-                      <Text className="text-label-sm font-label" style={{ color: colors.outline }}>Starting from</Text>
-                      <Text className="font-headline text-headline-md-mobile mt-0.5" style={{ color: colors.onSurface }}>
-                        <Text className="text-pharaoh-gold">{formatCurrency(hotel.averagePricePerNight, hotel.currency)}</Text>
-                        <Text className="text-sm font-normal" style={{ color: colors.outline }}>/night</Text>
-                      </Text>
-                    </View>
-                    <Button
-                      onPress={() => router.push(`/hotel/${hotel.slug}`)}
-                      className="bg-pharaoh-gold px-6 py-2 rounded-full active:scale-95"
-                      style={{ elevation: 0 }}
-                    >
-                      <Text className="text-white text-label-md font-semibold">View Details</Text>
-                    </Button>
+                    <Text className="text-papyrus-green font-label-md font-semibold">
+                      {hotel.rooms?.length ? `${hotel.rooms.length} ${t('hotelDetail.roomTypes', 'Room Types Available')}` : t('hotelListing.luxuryLandmark', 'Luxury Heritage Stay')}
+                    </Text>
+                    <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={18} color="#C8922A" />
                   </View>
                 </CardContent>
-              </Card>
+              </TouchableOpacity>
             </View>
           );
         }}

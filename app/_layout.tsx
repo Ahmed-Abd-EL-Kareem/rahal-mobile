@@ -12,13 +12,17 @@ import { queryClient } from '@/api/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { setAuthStoreRef } from '@/api/client';
+import { hydrationPromise } from '@/store/mmkvStore';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Prevent splash screen from auto-hiding before asset/auth loading is complete
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || '';
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 export default function RootLayout() {
   const { checkAuth } = useAuthStore();
@@ -30,6 +34,7 @@ export default function RootLayout() {
 
     const initApp = async () => {
       try {
+        await hydrationPromise;
         await checkAuth();
         // Sync language with i18n
         const lang = i18n.language;
@@ -54,7 +59,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  const postHogContent = (
+  const stackContent = (
     <Stack 
       screenOptions={{ 
         headerShown: false,
@@ -64,28 +69,36 @@ export default function RootLayout() {
     />
   );
 
+  const postHogContent = posthogKey ? (
+    <PostHogProvider
+      apiKey={posthogKey}
+      options={{
+        host: posthogHost,
+        flushAt: 10,
+        flushInterval: 30000,
+      }}
+      autocapture={{
+        captureTouches: false,
+      }}
+    >
+      {stackContent}
+    </PostHogProvider>
+  ) : (
+    stackContent
+  );
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <I18nextProvider i18n={i18n}>
-            {posthogKey ? (
-              <PostHogProvider
-                apiKey={posthogKey}
-                options={{
-                  host: posthogHost,
-                  flushAt: 10,
-                  flushInterval: 30000,
-                }}
-                autocapture={{
-                  captureTouches: false,
-                }}
-              >
-                {postHogContent}
-              </PostHogProvider>
-            ) : (
-              postHogContent
-            )}
+            <StripeProvider
+              publishableKey={stripePublishableKey}
+              merchantIdentifier="merchant.com.rahal.mobile"
+              urlScheme="rahal"
+            >
+              {postHogContent}
+            </StripeProvider>
           </I18nextProvider>
         </QueryClientProvider>
       </ErrorBoundary>
