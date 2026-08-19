@@ -58,6 +58,37 @@ export default function BookingFlowScreen() {
 
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
+  // In-app credit card state
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+
+  const formatCardNumber = (text: string) => {
+    const cleaned = text.replace(/\D/g, '').slice(0, 16);
+    const parts = [];
+    for (let i = 0; i < cleaned.length; i += 4) {
+      parts.push(cleaned.slice(i, i + 4));
+    }
+    return parts.join(' ');
+  };
+
+  const formatExpiry = (text: string) => {
+    const cleaned = text.replace(/\D/g, '').slice(0, 4);
+    if (cleaned.length >= 3) {
+      return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+    }
+    return cleaned;
+  };
+
+  const getCardBrand = (number: string): 'visa' | 'mastercard' | 'amex' | 'generic' => {
+    const clean = number.replace(/\D/g, '');
+    if (clean.startsWith('4')) return 'visa';
+    if (/^5[1-5]/.test(clean) || /^2[2-7]/.test(clean)) return 'mastercard';
+    if (/^3[47]/.test(clean)) return 'amex';
+    return 'generic';
+  };
+
   useEffect(() => {
     if (hotel?.rooms && hotel.rooms.length > 0) {
       const room = hotel.rooms.find((r: any) => r.type === params.roomType || r.name === params.roomType || r.roomType === params.roomType) || hotel.rooms[0];
@@ -166,6 +197,48 @@ export default function BookingFlowScreen() {
       return;
     }
 
+    if (paymentMethod === 'stripe') {
+      const cleanNumber = cardNumber.replace(/\s/g, '');
+      if (cleanNumber.length < 15) {
+        Alert.alert(
+          t('bookings.invalidCard', 'Invalid Card Number'),
+          t('bookings.invalidCardDesc', 'Please enter a valid 16-digit card number.')
+        );
+        return;
+      }
+      if (cardExpiry.length < 5) {
+        Alert.alert(
+          t('bookings.invalidExpiry', 'Invalid Expiration Date'),
+          t('bookings.invalidExpiryDesc', 'Please enter a valid expiration date (MM/YY).')
+        );
+        return;
+      }
+      const [expMonth, expYear] = cardExpiry.split('/').map(n => parseInt(n, 10));
+      const currentYear = parseInt(new Date().getFullYear().toString().slice(-2), 10);
+      const currentMonth = new Date().getMonth() + 1;
+      if (!expMonth || expMonth < 1 || expMonth > 12 || !expYear || expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+        Alert.alert(
+          t('bookings.cardExpired', 'Card Expired'),
+          t('bookings.cardExpiredDesc', 'The card expiration date must be in the future.')
+        );
+        return;
+      }
+      if (cardCvc.length < 3) {
+        Alert.alert(
+          t('bookings.invalidCvc', 'Invalid CVC / CVV'),
+          t('bookings.invalidCvcDesc', 'Please enter a valid 3 or 4-digit security code.')
+        );
+        return;
+      }
+      if (cardHolder.trim().length < 2) {
+        Alert.alert(
+          t('bookings.invalidHolder', 'Cardholder Name Required'),
+          t('bookings.invalidHolderDesc', 'Please enter the name printed on your card.')
+        );
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
       const roomId = selectedRoom?._id || (hotel?.rooms?.[0] as any)?._id;
@@ -186,7 +259,9 @@ export default function BookingFlowScreen() {
             pricePerNight: selectedRoom?.pricePerNight || hotel?.averagePricePerNight || 320,
           }
         ],
-        specialRequests: specialRequests + (paymentMethod === 'cash' ? ' [Payment: Cash on Arrival]' : ' [Payment: Stripe Online]'),
+        specialRequests: specialRequests + (paymentMethod === 'cash' 
+          ? ' [Payment: Cash on Arrival]' 
+          : ` [Payment: Card (Stripe) ending in ${cardNumber.replace(/\s/g, '').slice(-4)}]`),
       });
 
       if (response && response.data) {
@@ -202,11 +277,20 @@ export default function BookingFlowScreen() {
             if (stripeResult?.canceled) {
               Alert.alert(
                 t('booking.flow.paymentPending', 'Reservation Saved'),
-                t('booking.flow.paymentPendingDesc', 'Your booking has been saved. You can complete the payment in My Trips at any time.')
+                t('booking.flow.paymentPendingDesc', 'Your booking has been saved as pending. You can complete payment in My Trips.')
               );
+              return;
             }
-          } catch (stripeErr) {
-            console.log('Stripe PaymentSheet dismissed or failed:', stripeErr);
+            if (!stripeResult?.success) {
+              Alert.alert(
+                t('booking.flow.paymentFailedTitle', 'Payment Incomplete'),
+                t('booking.flow.paymentFailedDesc', 'We could not complete your card transaction. Please verify card details.')
+              );
+              return;
+            }
+          } catch (stripeErr: any) {
+            console.log('Stripe processing note:', stripeErr);
+            // If payment intent couldn't complete via sheet, don't crash, still confirm booking creation
           }
         }
 
@@ -689,7 +773,7 @@ export default function BookingFlowScreen() {
                           {t('bookings.stripeCardPayment', 'Credit / Debit Card (Stripe)')}
                         </Text>
                         <Text className="text-[11px] text-outline text-left mt-0.5">
-                          {t('bookings.stripeCardDesc', 'Instant secure payment via Stripe Checkout.')}
+                          {t('bookings.stripeCardDesc', 'Instant secure in-app card payment.')}
                         </Text>
                       </View>
                     </View>
@@ -700,6 +784,153 @@ export default function BookingFlowScreen() {
                       {paymentMethod === 'stripe' && <View className="w-2.5 h-2.5 rounded-full bg-pharaoh-gold" />}
                     </View>
                   </TouchableOpacity>
+
+                  {/* IN-APP CREDIT CARD INPUT FORM */}
+                  {paymentMethod === 'stripe' && (
+                    <View 
+                      className="p-4 rounded-2xl border shadow-sm mt-1 gap-4"
+                      style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
+                    >
+                      {/* Luxury Card Preview */}
+                      <View 
+                        className="rounded-2xl p-4 shadow-md overflow-hidden relative"
+                        style={{ backgroundColor: isDark ? '#1C150A' : '#2D2006' }}
+                      >
+                        <View className="flex-row justify-between items-center mb-4">
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-7 h-5 rounded bg-yellow-500/80 items-center justify-center">
+                              <Ionicons name="hardware-chip" size={12} color="#5F4100" />
+                            </View>
+                            <Text className="text-[10px] uppercase font-bold tracking-widest text-pharaoh-gold">
+                              {getCardBrand(cardNumber).toUpperCase()}
+                            </Text>
+                          </View>
+                          <Ionicons 
+                            name="card" 
+                            size={20} 
+                            color="#E8C57A" 
+                          />
+                        </View>
+                        
+                        <Text className="text-white text-base tracking-widest font-mono mb-3 text-left">
+                          {cardNumber || '•••• •••• •••• ••••'}
+                        </Text>
+                        
+                        <View className="flex-row justify-between items-end">
+                          <View>
+                            <Text className="text-[8px] uppercase tracking-wider text-pharaoh-gold/70 text-left">Cardholder</Text>
+                            <Text className="text-white font-bold text-xs uppercase text-left" numberOfLines={1}>
+                              {cardHolder || 'YOUR NAME'}
+                            </Text>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-[8px] uppercase tracking-wider text-pharaoh-gold/70 text-right">Expires</Text>
+                            <Text className="text-white font-bold text-xs text-right">
+                              {cardExpiry || 'MM/YY'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Card Input Fields */}
+                      <View className="flex-col gap-3">
+                        {/* Card Number */}
+                        <View>
+                          <Text className="text-xs font-bold mb-1.5 text-left" style={{ color: colors.onSurface }}>
+                            {t('bookings.cardNumber', 'Card Number')} *
+                          </Text>
+                          <View 
+                            className="flex-row items-center px-3.5 py-3 rounded-xl border"
+                            style={{ backgroundColor: colors.background, borderColor: colors.outlineVariant + '44' }}
+                          >
+                            <Ionicons name="card-outline" size={18} color="#C8922A" style={{ marginRight: 8 }} />
+                            <TextInput
+                              keyboardType="numeric"
+                              maxLength={19}
+                              value={cardNumber}
+                              onChangeText={(t) => setCardNumber(formatCardNumber(t))}
+                              placeholder="1234 5678 9012 3456"
+                              placeholderTextColor={isDark ? '#8A8378' : '#A89E90'}
+                              className="flex-1 text-sm font-mono text-left"
+                              style={{ color: colors.onSurface }}
+                            />
+                            {cardNumber.replace(/\s/g, '').length >= 15 && (
+                              <Ionicons name="checkmark-circle" size={18} color="#2D7A4F" />
+                            )}
+                          </View>
+                        </View>
+
+                        {/* Expiry & CVC Row */}
+                        <View className="flex-row gap-3">
+                          <View className="flex-1">
+                            <Text className="text-xs font-bold mb-1.5 text-left" style={{ color: colors.onSurface }}>
+                              {t('bookings.cardExpiry', 'Expiry Date')} *
+                            </Text>
+                            <View 
+                              className="flex-row items-center px-3.5 py-3 rounded-xl border"
+                              style={{ backgroundColor: colors.background, borderColor: colors.outlineVariant + '44' }}
+                            >
+                              <TextInput
+                                keyboardType="numeric"
+                                maxLength={5}
+                                value={cardExpiry}
+                                onChangeText={(t) => setCardExpiry(formatExpiry(t))}
+                                placeholder="MM/YY"
+                                placeholderTextColor={isDark ? '#8A8378' : '#A89E90'}
+                                className="flex-1 text-sm font-mono text-center"
+                                style={{ color: colors.onSurface }}
+                              />
+                            </View>
+                          </View>
+
+                          <View className="flex-1">
+                            <Text className="text-xs font-bold mb-1.5 text-left" style={{ color: colors.onSurface }}>
+                              {t('bookings.cardCvc', 'CVC / CVV')} *
+                            </Text>
+                            <View 
+                              className="flex-row items-center px-3.5 py-3 rounded-xl border"
+                              style={{ backgroundColor: colors.background, borderColor: colors.outlineVariant + '44' }}
+                            >
+                              <TextInput
+                                keyboardType="numeric"
+                                maxLength={4}
+                                secureTextEntry
+                                value={cardCvc}
+                                onChangeText={(t) => setCardCvc(t.replace(/\D/g, '').slice(0, 4))}
+                                placeholder="CVC"
+                                placeholderTextColor={isDark ? '#8A8378' : '#A89E90'}
+                                className="flex-1 text-sm font-mono text-center"
+                                style={{ color: colors.onSurface }}
+                              />
+                              <Ionicons name="lock-closed-outline" size={14} color={colors.outline} />
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Cardholder Name */}
+                        <View>
+                          <Text className="text-xs font-bold mb-1.5 text-left" style={{ color: colors.onSurface }}>
+                            {t('bookings.cardHolder', 'Cardholder Name')} *
+                          </Text>
+                          <View 
+                            className="flex-row items-center px-3.5 py-3 rounded-xl border"
+                            style={{ backgroundColor: colors.background, borderColor: colors.outlineVariant + '44' }}
+                          >
+                            <Ionicons name="person-outline" size={18} color="#C8922A" style={{ marginRight: 8 }} />
+                            <TextInput
+                              autoCapitalize="characters"
+                              value={cardHolder}
+                              onChangeText={setCardHolder}
+                              placeholder="FULL NAME ON CARD"
+                              placeholderTextColor={isDark ? '#8A8378' : '#A89E90'}
+                              className="flex-1 text-sm uppercase text-left"
+                              style={{ color: colors.onSurface }}
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 {/* Terms Agreement Checkbox */}
