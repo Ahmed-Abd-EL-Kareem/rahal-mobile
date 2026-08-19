@@ -22,7 +22,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY || '';
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51MockPublishableKeyForDevelopment00000000000000000000000000000000000000000000000000000000000000000000';
 
 export default function RootLayout() {
   const { checkAuth } = useAuthStore();
