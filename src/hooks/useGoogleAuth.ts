@@ -1,11 +1,25 @@
 // src/hooks/useGoogleAuth.ts
 import { useEffect, useState } from 'react';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { api, setAuthToken } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { router } from 'expo-router';
+
+// Safely obtain native GoogleSignin module if available in binary (e.g. dev build or standalone)
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const googleModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = googleModule?.GoogleSignin || null;
+  statusCodes = googleModule?.statusCodes || {};
+} catch (e) {
+  // Native module is not present in Expo Go
+  GoogleSignin = null;
+  statusCodes = {};
+}
 
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
@@ -25,8 +39,8 @@ const isExpoGo =
   Constants.appOwnership === 'expo' ||
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// Configure Google Sign-In on module load if client ID is available and not in Expo Go
-if (!isExpoGo && WEB_CLIENT_ID) {
+// Configure Google Sign-In on module load if client ID is available and native module exists
+if (!isExpoGo && GoogleSignin && WEB_CLIENT_ID) {
   try {
     GoogleSignin.configure({
       webClientId: WEB_CLIENT_ID,
@@ -43,7 +57,7 @@ export function useGoogleAuth() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
-    if (!isExpoGo && WEB_CLIENT_ID) {
+    if (!isExpoGo && GoogleSignin && WEB_CLIENT_ID) {
       try {
         GoogleSignin.configure({
           webClientId: WEB_CLIENT_ID,
@@ -57,10 +71,10 @@ export function useGoogleAuth() {
   }, []);
 
   const handlePromptAsync = async () => {
-    if (isExpoGo) {
+    if (isExpoGo || !GoogleSignin) {
       showToast({
         type: 'error',
-        message: 'Google Sign-In requires a development build — it is not supported in Expo Go.',
+        message: 'Google Sign-In requires a development build (npx expo run:android) — it is not supported in Expo Go.',
       });
       return;
     }
