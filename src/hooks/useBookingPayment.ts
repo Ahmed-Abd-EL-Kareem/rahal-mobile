@@ -39,49 +39,59 @@ export function useBookingPayment() {
         const { data } = res;
 
         if (!data?.paymentIntentClientSecret) {
-          throw new Error('Payment initialization failed: Missing client secret.');
+          throw new Error('Payment initialization failed: Missing client secret from backend.');
         }
 
-        if (stripe?.initPaymentSheet) {
-          // 2. Initialize native In-App PaymentSheet
-          const { error: initError } = await stripe.initPaymentSheet({
-            merchantDisplayName: 'Rahal Travel',
-            customerId: data.customerId,
-            customerEphemeralKeySecret: data.ephemeralKeySecret,
-            paymentIntentClientSecret: data.paymentIntentClientSecret,
-            allowsDelayedPaymentMethods: true,
-            style: 'automatic',
-            returnURL: 'rahal://booking/payment-return',
-            defaultBillingDetails: {
-              name: useAuthStore.getState().user?.name || '',
-              email: useAuthStore.getState().user?.email || '',
-            },
-          });
+        if (!stripe?.initPaymentSheet) {
+          throw new Error('Stripe PaymentSheet is not available. Please ensure you are running a development build.');
+        }
 
-          if (initError) {
-            // If the key is a placeholder / invalid test key during development, allow demo approval
-            if (initError.message?.includes('Invalid API Key') || initError.message?.includes('publishable key')) {
-              console.warn('[Stripe] Demo mode: Approved test card payment without live Stripe key.');
-              return { success: true, bookingId: data.bookingId, isDemo: true };
-            }
-            throw new Error(initError.message || 'Failed to initialize payment sheet');
+        // 2. Initialize native In-App PaymentSheet
+        const { error: initError } = await stripe.initPaymentSheet({
+          merchantDisplayName: 'Rahal Travel',
+          customerId: data.customerId,
+          customerEphemeralKeySecret: data.ephemeralKeySecret,
+          paymentIntentClientSecret: data.paymentIntentClientSecret,
+          allowsDelayedPaymentMethods: true,
+          style: 'automatic',
+          returnURL: 'rahal://booking/payment-return',
+          defaultBillingDetails: {
+            name: useAuthStore.getState().user?.name || '',
+            email: useAuthStore.getState().user?.email || '',
+          },
+        });
+
+        if (initError) {
+          console.error('[Stripe] initPaymentSheet error details:', initError);
+
+          // If the key is an unconfigured mock placeholder, allow demo approval
+          const currentKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+          const isMockKey = !currentKey || currentKey.includes('Mock') || currentKey.includes('your_stripe');
+
+          if (isMockKey && (initError.message?.includes('Invalid API Key') || initError.message?.includes('publishable key'))) {
+            console.warn('[Stripe] Demo mode: Approved test card payment without live Stripe key.');
+            return { success: true, bookingId: data.bookingId, isDemo: true };
           }
 
-          // 3. Present native in-app PaymentSheet bottom sheet
-          const { error: presentError } = await stripe.presentPaymentSheet();
+          throw new Error(initError.message || 'Failed to initialize Stripe payment sheet');
+        }
 
-          if (presentError) {
-            if (presentError.code === 'Canceled') {
-              return { canceled: true, bookingId: data.bookingId };
-            }
-            throw new Error(presentError.message || 'Payment failed');
+        // 3. Present native in-app PaymentSheet bottom sheet
+        const { error: presentError } = await stripe.presentPaymentSheet();
+
+        if (presentError) {
+          if (presentError.code === 'Canceled') {
+            return { canceled: true, bookingId: data.bookingId };
           }
+          throw new Error(presentError.message || 'Payment processing was declined or failed');
         }
 
         return { success: true, bookingId: data.bookingId };
       } catch (err: any) {
-        // If error is due to invalid/placeholder Stripe publishable key during local development
-        if (err?.message?.includes('Invalid API Key') || err?.message?.includes('publishable key')) {
+        const currentKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+        const isMockKey = !currentKey || currentKey.includes('Mock') || currentKey.includes('your_stripe');
+
+        if (isMockKey && (err?.message?.includes('Invalid API Key') || err?.message?.includes('publishable key'))) {
           console.warn('[Stripe] Demo mode: Approved test card payment without live Stripe key.');
           return { success: true, bookingId: params.bookingId, isDemo: true };
         }
@@ -139,47 +149,57 @@ export function useSubscriptionUpgrade() {
         const { data } = res;
 
         if (!data?.paymentIntentClientSecret) {
-          throw new Error('Subscription payment initialization failed: Missing client secret.');
+          throw new Error('Subscription payment initialization failed: Missing client secret from backend.');
         }
 
-        if (stripe?.initPaymentSheet) {
-          // 2. Initialize native In-App PaymentSheet
-          const { error: initError } = await stripe.initPaymentSheet({
-            merchantDisplayName: 'Rahal Travel',
-            customerId: data.customerId,
-            customerEphemeralKeySecret: data.ephemeralKeySecret,
-            paymentIntentClientSecret: data.paymentIntentClientSecret,
-            allowsDelayedPaymentMethods: true,
-            style: 'automatic',
-            returnURL: 'rahal://subscription/return',
-            defaultBillingDetails: {
-              name: useAuthStore.getState().user?.name || '',
-              email: useAuthStore.getState().user?.email || '',
-            },
-          });
+        if (!stripe?.initPaymentSheet) {
+          throw new Error('Stripe PaymentSheet is not available. Please ensure you are running a development build.');
+        }
 
-          if (initError) {
-            if (initError.message?.includes('Invalid API Key') || initError.message?.includes('publishable key')) {
-              console.warn('[Stripe] Demo mode: Approved test subscription upgrade.');
-              return { success: true, planName: data.planName, isDemo: true };
-            }
-            throw new Error(initError.message || 'Failed to initialize payment sheet');
+        // 2. Initialize native In-App PaymentSheet
+        const { error: initError } = await stripe.initPaymentSheet({
+          merchantDisplayName: 'Rahal Travel',
+          customerId: data.customerId,
+          customerEphemeralKeySecret: data.ephemeralKeySecret,
+          paymentIntentClientSecret: data.paymentIntentClientSecret,
+          allowsDelayedPaymentMethods: true,
+          style: 'automatic',
+          returnURL: 'rahal://subscription/return',
+          defaultBillingDetails: {
+            name: useAuthStore.getState().user?.name || '',
+            email: useAuthStore.getState().user?.email || '',
+          },
+        });
+
+        if (initError) {
+          console.error('[Stripe] Subscription initPaymentSheet error details:', initError);
+
+          const currentKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+          const isMockKey = !currentKey || currentKey.includes('Mock') || currentKey.includes('your_stripe');
+
+          if (isMockKey && (initError.message?.includes('Invalid API Key') || initError.message?.includes('publishable key'))) {
+            console.warn('[Stripe] Demo mode: Approved test subscription upgrade.');
+            return { success: true, planName: data.planName, isDemo: true };
           }
+          throw new Error(initError.message || 'Failed to initialize payment sheet');
+        }
 
-          // 3. Present native in-app PaymentSheet bottom sheet
-          const { error: presentError } = await stripe.presentPaymentSheet();
+        // 3. Present native in-app PaymentSheet bottom sheet
+        const { error: presentError } = await stripe.presentPaymentSheet();
 
-          if (presentError) {
-            if (presentError.code === 'Canceled') {
-              return { canceled: true };
-            }
-            throw new Error(presentError.message || 'Payment failed');
+        if (presentError) {
+          if (presentError.code === 'Canceled') {
+            return { canceled: true };
           }
+          throw new Error(presentError.message || 'Payment failed');
         }
 
         return { success: true, planName: data.planName };
       } catch (err: any) {
-        if (err?.message?.includes('Invalid API Key') || err?.message?.includes('publishable key')) {
+        const currentKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+        const isMockKey = !currentKey || currentKey.includes('Mock') || currentKey.includes('your_stripe');
+
+        if (isMockKey && (err?.message?.includes('Invalid API Key') || err?.message?.includes('publishable key'))) {
           console.warn('[Stripe] Demo mode: Approved test subscription upgrade.');
           return { success: true, planName, isDemo: true };
         }
