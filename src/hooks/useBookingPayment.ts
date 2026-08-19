@@ -111,7 +111,10 @@ export function useBookingPayment() {
       }
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || error.message || 'Payment failed';
+      let msg = error.response?.data?.message || error.message || 'Payment failed';
+      if (msg.includes('No such payment_intent')) {
+        msg = 'Stripe Account Mismatch: The backend PaymentIntent was created with a different Stripe account than the mobile EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY. Please ensure your backend STRIPE_SECRET_KEY and mobile EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY are from the same Stripe account and mode (Test mode).';
+      }
       showToast({ type: 'error', message: msg });
     },
   });
