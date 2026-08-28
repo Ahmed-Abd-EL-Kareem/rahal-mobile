@@ -1,6 +1,6 @@
 // src/hooks/useAIBooking.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/api/client';
+import { api, extractApiErrorMessage } from '@/api/client';
 import { queryKeys } from '@/api/queryKeys';
 import { useAISessionStore, BookingSession } from '@/store/aiSessionStore';
 import { useUIStore } from '@/store/uiStore';
@@ -22,8 +22,9 @@ export function useAIBooking() {
     onSuccess: (data) => {
       // The store will be updated by the hook
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Failed to start booking flow' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'Failed to start booking flow');
+      showToast({ type: 'error', message });
     },
   });
 
@@ -40,8 +41,9 @@ export function useAIBooking() {
         router.push(`/booking/${data.bookingId}`);
       }
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Failed to process booking message' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'Failed to process booking message');
+      showToast({ type: 'error', message });
     },
   });
 
@@ -65,8 +67,9 @@ export function useAIHotelSearch() {
         data: { reply: string; tokensUsed: number };
       }>();
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'AI hotel search failed' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'AI hotel search failed');
+      showToast({ type: 'error', message });
     },
   });
 
@@ -86,8 +89,9 @@ export function useAIHotelRecommendations(tripId?: string) {
         data: { reply: string; tokensUsed: number };
       }>();
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Failed to get recommendations' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'Failed to get recommendations');
+      showToast({ type: 'error', message });
     },
   });
 
@@ -104,8 +108,9 @@ export function useAIChatMutation() {
         data: { reply: string; tokensUsed: number };
       }>();
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Chat failed' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'Chat failed');
+      showToast({ type: 'error', message });
     },
   });
 
@@ -128,8 +133,9 @@ export function useTripGeneration() {
       queryClient.invalidateQueries({ queryKey: ['trips'] });
       router.push(`/trip/${data.data.trip._id}`);
     },
-    onError: (error: any) => {
-      showToast({ type: 'error', message: error.response?.data?.message || 'Trip generation failed' });
+    onError: async (error: any) => {
+      const message = await extractApiErrorMessage(error, 'Trip generation failed');
+      showToast({ type: 'error', message });
     },
   });
 
