@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card, CardContent } from '@/components/ui';
 import { useGenerateTrip } from '@/api/hooks/useTrips';
 import { useTheme } from '@/hooks/useTheme';
+import { extractApiErrorMessage } from '@/api/client';
 
 const INTERESTS = [
   { key: 'history', label: 'Historical Sites', icon: 'library-outline' },
@@ -62,7 +63,7 @@ export default function TripGenerateScreen() {
       });
       router.push(`/trip/${response.data.trip._id}`);
     } catch (error: any) {
-      const message = error.response?.data?.message || t('tripGenerate.errors.failed');
+      const message = await extractApiErrorMessage(error, t('tripGenerate.errors.failed'));
       Alert.alert(t('tripGenerate.errors.errorTitle'), message);
     } finally {
       setIsGenerating(false);

@@ -101,3 +101,18 @@ class APIClient {
 }
 
 export const api = new APIClient();
+
+export const extractApiErrorMessage = async (
+  error: any,
+  fallbackMessage: string = 'An unexpected error occurred'
+): Promise<string> => {
+  if (error?.response) {
+    try {
+      const errData = await error.response.clone().json();
+      return errData.message || errData.error || fallbackMessage;
+    } catch {
+      return error.message || fallbackMessage;
+    }
+  }
+  return error?.message || fallbackMessage;
+};

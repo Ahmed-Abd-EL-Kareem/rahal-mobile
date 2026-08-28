@@ -186,7 +186,9 @@ export default function BookingFlowScreen() {
             pricePerNight: selectedRoom?.pricePerNight || hotel?.averagePricePerNight || 320,
           }
         ],
-        specialRequests: specialRequests + (paymentMethod === 'cash' ? ' [Payment: Cash on Arrival]' : ' [Payment: Stripe Online]'),
+        specialRequests: specialRequests + (paymentMethod === 'cash' 
+          ? ' [Payment: Cash on Arrival]' 
+          : ' [Payment: Stripe Online Card]'),
       });
 
       if (response && response.data) {
@@ -202,11 +204,20 @@ export default function BookingFlowScreen() {
             if (stripeResult?.canceled) {
               Alert.alert(
                 t('booking.flow.paymentPending', 'Reservation Saved'),
-                t('booking.flow.paymentPendingDesc', 'Your booking has been saved. You can complete the payment in My Trips at any time.')
+                t('booking.flow.paymentPendingDesc', 'Your booking has been saved as pending. You can complete payment in My Trips.')
               );
+              return;
             }
-          } catch (stripeErr) {
-            console.log('Stripe PaymentSheet dismissed or failed:', stripeErr);
+            if (!stripeResult?.success) {
+              Alert.alert(
+                t('booking.flow.paymentFailedTitle', 'Payment Incomplete'),
+                t('booking.flow.paymentFailedDesc', 'We could not complete your card transaction. Please verify card details.')
+              );
+              return;
+            }
+          } catch (stripeErr: any) {
+            console.log('Stripe processing note:', stripeErr);
+            // If payment intent couldn't complete via sheet, don't crash, still confirm booking creation
           }
         }
 
@@ -689,7 +700,7 @@ export default function BookingFlowScreen() {
                           {t('bookings.stripeCardPayment', 'Credit / Debit Card (Stripe)')}
                         </Text>
                         <Text className="text-[11px] text-outline text-left mt-0.5">
-                          {t('bookings.stripeCardDesc', 'Instant secure payment via Stripe Checkout.')}
+                          {t('bookings.stripeCardDesc', 'Instant secure in-app card payment.')}
                         </Text>
                       </View>
                     </View>
