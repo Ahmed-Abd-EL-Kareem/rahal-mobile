@@ -11,6 +11,7 @@ import { useUIStore } from '@/store/uiStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
+import { extractApiErrorMessage } from '@/api/client';
 
 const loginSchema = z.object({
   email: z.string().email('auth.errors.invalidCredentials'),
@@ -42,7 +43,7 @@ export default function LoginScreen() {
       await login(data.email, data.password);
       router.replace('/(tabs)');
     } catch (error: any) {
-      const message = error.response?.data?.message || t('auth.errors.invalidCredentials');
+      const message = await extractApiErrorMessage(error, t('auth.errors.invalidCredentials'));
       showToast({ type: 'error', message });
     }
   };

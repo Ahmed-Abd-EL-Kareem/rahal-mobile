@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { useAIChat, BackendConversationItem } from '@/hooks/useAIChat';
 import { useAISessionStore, ChatSession } from '@/store/aiSessionStore';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/store/authStore';
 import { Badge } from '@/components/ui/Badge';
 
 const SUGGESTIONS = [
@@ -34,6 +35,7 @@ export default function AIScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { user, isAuthenticated } = useAuthStore();
   const { 
     sendMessage, 
     isLoading, 
@@ -54,6 +56,26 @@ export default function AIScreen() {
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  if (!isAuthenticated || !user) {
+    return (
+      <View style={{ paddingTop: insets.top, backgroundColor: colors.background }} className="flex-1 justify-center items-center p-6">
+        <Image source={require('../../assets/logo-2.png')} style={{ width: 80, height: 80, marginBottom: 16 }} resizeMode="contain" />
+        <Text className="text-3xl font-headline text-pharaoh-gold mb-2">Rahal AI Concierge</Text>
+        <Text className="text-body-md text-center mb-8 px-6" style={{ color: colors.onSurfaceVariant }}>
+          {t('chatbot.authRequiredDesc', 'Log in or sign up to consult Rahal AI, plan customized itineraries, and unlock intelligent recommendations.')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(auth)/login')}
+          className="w-full max-w-sm h-12 bg-pharaoh-gold rounded-full justify-center items-center shadow-md active:scale-95"
+        >
+          <Text className="text-white font-semibold uppercase tracking-wider text-label-md">
+            {t('auth.login.submit', 'Log In / Sign Up')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const isRTL = i18n.language === 'ar';
   const localSessions: ChatSession[] = Array.from(chatSessionsMap.values()).sort(

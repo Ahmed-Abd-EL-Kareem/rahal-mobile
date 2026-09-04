@@ -16,6 +16,7 @@ import { hydrationPromise } from '@/store/mmkvStore';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { ToastContainer } from '@/components/ui/ToastContainer';
 
 // Prevent splash screen from auto-hiding before asset/auth loading is complete
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -98,6 +99,7 @@ export default function RootLayout() {
               urlScheme="rahal"
             >
               {postHogContent}
+              <ToastContainer />
             </StripeProvider>
           </I18nextProvider>
         </QueryClientProvider>

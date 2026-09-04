@@ -1,7 +1,8 @@
 // src/hooks/useGoogleAuth.ts
 import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { api, setAuthToken } from '@/api/client';
+import { api, setAuthToken, extractApiErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { router } from 'expo-router';
@@ -21,69 +22,57 @@ try {
   statusCodes = {};
 }
 
-const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+  '11613087660-pp7ojl5ra83k8pt3v2b4cuqil72dkuv7.apps.googleusercontent.com';
+const ANDROID_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ||
+  '11613087660-pp7ojl5ra83k8pt3v2b4cuqil72dkuv7.apps.googleusercontent.com';
 const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-
-if (!WEB_CLIENT_ID) {
-  console.warn('[useGoogleAuth] Missing EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID environment variable.');
-}
-if (!ANDROID_CLIENT_ID) {
-  console.warn('[useGoogleAuth] Missing EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID environment variable.');
-}
-if (!IOS_CLIENT_ID) {
-  console.warn('[useGoogleAuth] Missing EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID environment variable.');
-}
 
 const isExpoGo =
   Constants.appOwnership === 'expo' ||
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// Configure Google Sign-In on module load if client ID is available and native module exists
-if (!isExpoGo && GoogleSignin && WEB_CLIENT_ID) {
-  try {
-    GoogleSignin.configure({
-      webClientId: WEB_CLIENT_ID,
-      iosClientId: IOS_CLIENT_ID,
-      scopes: ['profile', 'email'],
-    });
-  } catch (err) {
-    console.error('[useGoogleAuth] Failed to configure GoogleSignin:', err);
+const configureGoogleSignin = () => {
+  if (!isExpoGo && GoogleSignin && WEB_CLIENT_ID) {
+    try {
+      GoogleSignin.configure({
+        webClientId: WEB_CLIENT_ID,
+        iosClientId: IOS_CLIENT_ID,
+        offlineAccess: true,
+        scopes: ['profile', 'email'],
+      });
+    } catch (err) {
+      console.error('[useGoogleAuth] Failed to configure GoogleSignin:', err);
+    }
   }
-}
+};
+
+// Configure immediately on module load
+configureGoogleSignin();
 
 export function useGoogleAuth() {
   const { showToast } = useUIStore();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
-    if (!isExpoGo && GoogleSignin && WEB_CLIENT_ID) {
-      try {
-        GoogleSignin.configure({
-          webClientId: WEB_CLIENT_ID,
-          iosClientId: IOS_CLIENT_ID,
-          scopes: ['profile', 'email'],
-        });
-      } catch (err) {
-        console.error('[useGoogleAuth] Failed to configure GoogleSignin in useEffect:', err);
-      }
-    }
+    configureGoogleSignin();
   }, []);
 
   const handlePromptAsync = async () => {
     if (isExpoGo || !GoogleSignin) {
-      showToast({
-        type: 'error',
-        message: 'Google Sign-In requires a development build (npx expo run:android) — it is not supported in Expo Go.',
-      });
+      const msg =
+        'Google Sign-In requires a development build or preview APK — it is not supported in Expo Go.';
+      Alert.alert('Google Sign-In', msg);
+      showToast({ type: 'error', message: msg });
       return;
     }
 
     if (!WEB_CLIENT_ID) {
-      showToast({
-        type: 'error',
-        message: 'Google Web Client ID is missing. Please check your environment variables.',
-      });
+      const msg = 'Google Web Client ID is missing. Please check your configuration.';
+      Alert.alert('Google Sign-In', msg);
+      showToast({ type: 'error', message: msg });
       return;
     }
 
@@ -91,34 +80,74 @@ export function useGoogleAuth() {
       setIsAuthenticating(true);
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const signInResult = await GoogleSignin.signIn();
-      
-      const idToken = signInResult.data?.idToken || (signInResult as any).idToken;
+      console.log('[useGoogleAuth] signInResult:', JSON.stringify(signInResult));
 
-      if (!idToken) {
-        throw new Error('No ID token received from Google Sign-In');
+      if (signInResult.type === 'cancelled') {
+        return;
       }
 
-      const res = await api.post('auth/google/mobile', { json: { idToken } })
+      let idToken = signInResult.data?.idToken || (signInResult as any).idToken;
+
+      if (!idToken) {
+        try {
+          const tokens = await GoogleSignin.getTokens();
+          idToken = tokens?.idToken;
+          console.log('[useGoogleAuth] getTokens retrieved idToken:', !!idToken);
+        } catch (tokErr) {
+          console.warn('[useGoogleAuth] getTokens error:', tokErr);
+        }
+      }
+
+      if (!idToken) {
+        throw new Error(
+          'No ID token received from Google Sign-In. Please check your Google Play Services account.'
+        );
+      }
+
+      const res = await api
+        .post('auth/google/mobile', { json: { idToken } })
         .json<{ token: string; data: { user: any }; message?: string }>();
+
+      if (!res.token || !res.data?.user) {
+        throw new Error('Invalid response received from authentication server.');
+      }
 
       await setAuthToken(res.token);
       useAuthStore.getState().setUser(res.data.user);
       useAuthStore.setState({ token: res.token, isAuthenticated: true, isLoading: false });
-      await useAuthStore.getState().fetchSubscription();
+
+      try {
+        await useAuthStore.getState().fetchSubscription();
+      } catch (subErr) {
+        console.warn('[useGoogleAuth] fetchSubscription note:', subErr);
+      }
+
       showToast({ type: 'success', message: res.message || 'Google sign-in successful' });
       router.replace('/(tabs)');
     } catch (err: any) {
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled the sign-in flow - no toast needed
-      } else if (err.code === statusCodes.IN_PROGRESS) {
-        // Operation already in progress
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        showToast({
-          type: 'error',
-          message: 'Google Play Services is not available or outdated on this device.',
-        });
+      console.error('[useGoogleAuth] Sign-in error:', err);
+      if (
+        err.code === statusCodes.SIGN_IN_CANCELLED ||
+        err.code === 'SIGN_IN_CANCELLED' ||
+        err.message?.includes('cancelled')
+      ) {
+        // User cancelled
+        return;
+      } else if (err.code === statusCodes.IN_PROGRESS || err.code === 'IN_PROGRESS') {
+        return;
+      } else if (
+        err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE ||
+        err.code === 'PLAY_SERVICES_NOT_AVAILABLE'
+      ) {
+        const msg = 'Google Play Services is not available or outdated on this device.';
+        Alert.alert('Google Sign-In', msg);
+        showToast({ type: 'error', message: msg });
       } else {
-        const msg = err.response?.data?.message || err.message || 'Google Sign-In failed';
+        const msg = await extractApiErrorMessage(
+          err,
+          err.message || 'Google Sign-In failed. Please try again.'
+        );
+        Alert.alert('Google Sign-In', msg);
         showToast({ type: 'error', message: msg });
       }
     } finally {

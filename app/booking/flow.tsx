@@ -4,15 +4,21 @@ import { ScrollView, View, Text, TouchableOpacity, Alert, KeyboardAvoidingView, 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { arEG, enUS } from 'date-fns/locale';
 import { useCreateBooking } from '@/api/hooks/useBookings';
 import { useBookingPayment } from '@/hooks/useBookingPayment';
 import { useHotel } from '@/api/hooks/useHotels';
 import { formatCurrency } from '@/utils/currency';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/store/authStore';
+import { extractApiErrorMessage } from '@/api/client';
+import { CalendarPickerModal } from '@/components/booking/CalendarPickerModal';
 
 export default function BookingFlowScreen() {
   const { t, i18n } = useTranslation();
+  const { user, isAuthenticated } = useAuthStore();
   const params = useLocalSearchParams<{
     hotelId?: string;
     roomType?: string;
@@ -24,8 +30,10 @@ export default function BookingFlowScreen() {
   }>();
   const insets = useSafeAreaInsets();
   const { colors, isDark, isRTL } = useTheme();
+  const dateLocale = i18n.language === 'ar' ? arEG : enUS;
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Default dates: tomorrow and 3 days later
   const getTomorrowStr = () => {
@@ -226,9 +234,24 @@ export default function BookingFlowScreen() {
         throw new Error('No reservation details returned from backend.');
       }
     } catch (error: any) {
-      Alert.alert(t('bookings.bookingFailed', 'Booking Failed'), error.response?.data?.message || 'Failed to complete your reservation. Please try again.');
+      const message = await extractApiErrorMessage(error, t('bookings.bookingFailedDesc', 'Failed to complete your reservation. Please try again.'));
+      Alert.alert(t('bookings.bookingFailed', 'Booking Failed'), message);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    try {
+      const parts = dateStr.split('-').map(Number);
+      if (parts.length === 3) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (!isNaN(d.getTime())) return format(d, 'EEE, d MMM yyyy', { locale: dateLocale });
+      }
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? dateStr : format(d, 'EEE, d MMM yyyy', { locale: dateLocale });
+    } catch {
+      return dateStr;
     }
   };
 
@@ -241,6 +264,34 @@ export default function BookingFlowScreen() {
     return 'Heritage Sanctuary';
   };
   const hotelName: string = getHotelName();
+
+  if (!isAuthenticated || !user) {
+    return (
+      <View style={{ paddingTop: insets.top, backgroundColor: colors.background }} className="flex-1 justify-center items-center p-6">
+        <Image source={require('@/assets/logo-2.png')} style={{ width: 80, height: 80, marginBottom: 16 }} resizeMode="contain" />
+        <Text className="text-3xl font-headline text-pharaoh-gold mb-2">Rahal Sanctuary</Text>
+        <Text className="text-body-md text-center mb-8 px-6" style={{ color: colors.onSurfaceVariant }}>
+          {t('bookings.authRequiredDesc', 'Please log in or create an account to securely reserve your sanctuary stay and manage your bookings.')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(auth)/login')}
+          className="w-full max-w-sm h-12 bg-pharaoh-gold rounded-full justify-center items-center shadow-md active:scale-95"
+        >
+          <Text className="text-white font-semibold uppercase tracking-wider text-label-md">
+            {t('auth.login.submit', 'Log In / Sign Up')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-4 px-6 py-2"
+        >
+          <Text className="text-xs font-bold" style={{ color: colors.outline }}>
+            {t('common.back', 'Go Back')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (isLoading && !hotel && !selectedRoom) {
     return (
@@ -373,49 +424,69 @@ export default function BookingFlowScreen() {
                   </View>
                 </View>
 
-                {/* Date Inputs */}
-                <View className="flex-row gap-3.5">
-                  {/* Check In */}
-                  <View 
-                    className="flex-1 border rounded-2xl p-4 shadow-sm"
-                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-                  >
-                    <View className="flex-row items-center gap-1.5 mb-1.5">
-                      <Ionicons name="calendar-outline" size={15} color="#C8922A" />
-                      <Text className="text-[11px] uppercase tracking-wider font-bold text-left" style={{ color: colors.outline }}>
-                        {t('hotelDetail.checkIn', 'Check-in')}
+                {/* Date Selection Cards (Visual Calendar Trigger) */}
+                <View className="gap-2">
+                  <View className="flex-row gap-3.5">
+                    {/* Check In Card */}
+                    <TouchableOpacity 
+                      onPress={() => setIsCalendarOpen(true)}
+                      activeOpacity={0.75}
+                      className="flex-1 border rounded-2xl p-4 shadow-sm active:scale-[0.98]"
+                      style={{ backgroundColor: colors.surface, borderColor: '#C8922A66' }}
+                    >
+                      <View className="flex-row items-center justify-between mb-1.5">
+                        <View className="flex-row items-center gap-1.5">
+                          <Ionicons name="calendar" size={15} color="#C8922A" />
+                          <Text className="text-[11px] uppercase tracking-wider font-bold text-left" style={{ color: colors.outline }}>
+                            {t('hotelDetail.checkIn', 'Check-in')}
+                          </Text>
+                        </View>
+                        <Ionicons name="calendar-outline" size={14} color="#C8922A" />
+                      </View>
+                      <Text className="text-sm font-bold text-left" style={{ color: colors.onSurface }}>
+                        {formatDisplayDate(checkIn)}
                       </Text>
-                    </View>
-                    <TextInput
-                      value={checkIn}
-                      onChangeText={setCheckIn}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.outline}
-                      className="text-base font-bold text-left p-0"
-                      style={{ color: colors.onSurface }}
-                    />
-                  </View>
-                  
-                  {/* Check Out */}
-                  <View 
-                    className="flex-1 border rounded-2xl p-4 shadow-sm"
-                    style={{ backgroundColor: colors.surface, borderColor: colors.outlineVariant + '33' }}
-                  >
-                    <View className="flex-row items-center gap-1.5 mb-1.5">
-                      <Ionicons name="log-out-outline" size={15} color="#C8922A" />
-                      <Text className="text-[11px] uppercase tracking-wider font-bold text-left" style={{ color: colors.outline }}>
-                        {t('hotelDetail.checkOut', 'Check-out')}
+                      <Text className="text-[10px] text-pharaoh-gold text-left mt-1 font-semibold">
+                        {t('bookings.tapToSelectDate', 'Tap to pick date')}
                       </Text>
-                    </View>
-                    <TextInput
-                      value={checkOut}
-                      onChangeText={setCheckOut}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.outline}
-                      className="text-base font-bold text-left p-0"
-                      style={{ color: colors.onSurface }}
-                    />
+                    </TouchableOpacity>
+                    
+                    {/* Check Out Card */}
+                    <TouchableOpacity 
+                      onPress={() => setIsCalendarOpen(true)}
+                      activeOpacity={0.75}
+                      className="flex-1 border rounded-2xl p-4 shadow-sm active:scale-[0.98]"
+                      style={{ backgroundColor: colors.surface, borderColor: '#C8922A66' }}
+                    >
+                      <View className="flex-row items-center justify-between mb-1.5">
+                        <View className="flex-row items-center gap-1.5">
+                          <Ionicons name="log-out" size={15} color="#C8922A" />
+                          <Text className="text-[11px] uppercase tracking-wider font-bold text-left" style={{ color: colors.outline }}>
+                            {t('hotelDetail.checkOut', 'Check-out')}
+                          </Text>
+                        </View>
+                        <Ionicons name="calendar-outline" size={14} color="#C8922A" />
+                      </View>
+                      <Text className="text-sm font-bold text-left" style={{ color: colors.onSurface }}>
+                        {formatDisplayDate(checkOut)}
+                      </Text>
+                      <Text className="text-[10px] text-pharaoh-gold text-left mt-1 font-semibold">
+                        {t('bookings.tapToSelectDate', 'Tap to pick date')}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
+
+                  {/* Nights summary pill */}
+                  <TouchableOpacity
+                    onPress={() => setIsCalendarOpen(true)}
+                    activeOpacity={0.8}
+                    className="flex-row items-center justify-center gap-2 py-2 px-4 rounded-xl border border-pharaoh-gold/30 bg-primary-fixed/20 self-center mt-1"
+                  >
+                    <Ionicons name="moon" size={13} color="#C8922A" />
+                    <Text className="text-xs font-bold text-pharaoh-gold">
+                      {totalNights} {t('bookings.nightsCount', 'Night(s) Stay')} • {t('bookings.changeDates', 'Change Dates')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Steppers for Rooms & Guests */}
@@ -867,6 +938,18 @@ export default function BookingFlowScreen() {
           </View>
         </View>
       )}
+
+      {/* Calendar Picker Modal */}
+      <CalendarPickerModal
+        visible={isCalendarOpen}
+        checkIn={checkIn}
+        checkOut={checkOut}
+        onClose={() => setIsCalendarOpen(false)}
+        onConfirm={(newCheckIn, newCheckOut) => {
+          setCheckIn(newCheckIn);
+          setCheckOut(newCheckOut);
+        }}
+      />
 
     </View>
   );

@@ -10,6 +10,7 @@ import { formatCurrency } from '@/utils/currency';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useFavoritesStore } from '@/store/favoritesStore';
+import { useAuthStore } from '@/store/authStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const DEFAULT_ROOMS = [
 
 export default function HotelDetailScreen() {
   const { t, i18n } = useTranslation();
+  const { user, isAuthenticated } = useAuthStore();
   const params = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { colors, isDark, isRTL } = useTheme();
@@ -61,14 +63,31 @@ export default function HotelDetailScreen() {
       return;
     }
 
+    if (!isAuthenticated || !user) {
+      Alert.alert(
+        t('auth.loginRequired', 'Login Required'),
+        t('bookings.authRequiredDesc', 'Please log in or create an account to book this sanctuary.'),
+        [
+          { text: t('common.cancel', 'Cancel'), style: 'cancel' },
+          { text: t('auth.login.submit', 'Log In'), onPress: () => router.push('/(auth)/login') }
+        ]
+      );
+      return;
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const threeDaysLater = new Date();
+    threeDaysLater.setDate(threeDaysLater.getDate() + 4);
+
     router.push({
       pathname: '/booking/flow',
       params: {
         hotelId: hotel?._id || params.id || '',
         roomType: selectedRoom.type || selectedRoom.name || 'Sanctuary Suite',
         pricePerNight: String(selectedRoom.pricePerNight || hotel?.averagePricePerNight || 320),
-        checkIn: '2026-09-01',
-        checkOut: '2026-09-04',
+        checkIn: tomorrow.toISOString().split('T')[0],
+        checkOut: threeDaysLater.toISOString().split('T')[0],
         guests: String(selectedRoom.capacity || 2),
         rooms: '1',
       }

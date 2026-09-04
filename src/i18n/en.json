@@ -258,7 +258,8 @@
       "suggestion2": "Cairo Foodie Guide",
       "suggestion3": "Hidden Red Sea Beaches",
       "newChatStarted": "New chat started",
-      "requestFailed": "Failed to process request"
+      "requestFailed": "Failed to process request",
+      "authRequiredDesc": "Log in or sign up to consult Rahal AI, plan customized itineraries, and unlock intelligent recommendations."
     },
     "pricing": {
       "badge": "AI-Powered Travel",
@@ -901,8 +902,23 @@
     "capacityLimitTitle": "Capacity Limit Reached",
     "capacityLimitDesc": "Each room accommodates up to {capacity} guests. Max capacity reached for your selected rooms.",
     "invalidDateFormat": "Please enter dates in YYYY-MM-DD format.",
-    "checkInPastError": "Check-in date cannot be in the past.",
+    "checkInPastError": "Check-in date cannot be in the past. Please select today or a future date.",
     "checkOutBeforeCheckIn": "Check-out date must be after check-in date.",
+    "selectStayDates": "Select Stay Dates",
+    "tapToSelectRange": "Choose your check-in and check-out dates",
+    "selectDate": "Select Date",
+    "nightsCount": "night(s)",
+    "confirmNights": "Confirm {count} Night(s)",
+    "selectCheckOut": "Pick Check-out Date",
+    "tapToSelectDate": "Tap to pick date",
+    "changeDates": "Change Dates",
+    "authRequiredDesc": "Please log in or create an account to securely reserve your sanctuary stay and manage your bookings.",
+    "bookingFailedDesc": "Failed to complete your reservation. Please check dates and try again.",
+    "presets": {
+      "thisWeekend": "This Weekend (3N)",
+      "threeNights": "Tomorrow (3 Nights)",
+      "oneWeek": "1 Week Stay"
+    },
     "selectPaymentMethod": "Select Payment Method",
     "cashOnArrival": "Cash on Arrival (Pay at Hotel)",
     "cashOnArrivalDesc": "No advance payment required. Pay upon check-in at the hotel.",
